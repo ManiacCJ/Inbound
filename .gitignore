@@ -1,0 +1,6 @@
+media/
+static/
+db.sqlite3
+.idea/
+__pycache__/
+costsummary/migrations/
