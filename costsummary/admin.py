@@ -28,3 +28,25 @@ class TecCoreAdmin(admin.ModelAdmin):
     ordering = [
         'tec_id',
     ]
+
+
+@admin.register(models.NominalLabelMapping)
+class NominalLabelMappingAdmin(admin.ModelAdmin):
+    """Nominal label mapping admin. """
+
+    list_display = (
+        'value',
+        'book',
+        'plant_code',
+        'model'
+    )
+
+    search_fields = [
+        'value'
+    ]
+
+    list_filter = (
+        'book',
+        'plant_code',
+        'model'
+    )

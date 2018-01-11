@@ -16,6 +16,9 @@ def initialize_data(request, data):
     if data == 'tec-num':
         row_count = InitializeData.load_initial_tec_num()
 
+    elif data == 'nl':
+        row_count = InitializeData.load_initial_nl_mapping()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 
