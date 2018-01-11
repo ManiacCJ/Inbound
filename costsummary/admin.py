@@ -50,3 +50,42 @@ class NominalLabelMappingAdmin(admin.ModelAdmin):
         'plant_code',
         'model'
     )
+
+
+class EbomConfigurationInline(admin.StackedInline):
+    """ EBOM configuration data as inline. """
+    model = models.EbomConfiguration
+    extra = 0
+
+
+@admin.register(models.Ebom)
+class EbomAdmin(admin.ModelAdmin):
+    """ EBOM admin. """
+    list_display = (
+        'part_number',
+        'label',
+        'upc',
+        'fna',
+        'description_en',
+        'description_cn',
+        'work_shop',
+        'vendor_duns_number',
+        'supplier_name',
+        'model_and_option',
+        'vpps'
+    )
+
+    search_fields = [
+        'part_number',
+        'description_en',
+        'description_cn',
+        'supplier_name'
+    ]
+
+    list_filter = (
+        'label',
+    )
+
+    inlines = [
+        EbomConfigurationInline
+    ]

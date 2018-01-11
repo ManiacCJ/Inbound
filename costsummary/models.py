@@ -39,3 +39,59 @@ class NominalLabelMapping(models.Model):
     def __str__(self):
         return "{0}({1}, {2}, {3})".format(self.value, self.book, self.plant_code, self.model)
 
+
+class Ebom(models.Model):
+    """ EBOM data. """
+    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='车型')
+
+    # other fields
+    upc = models.CharField(max_length=20, verbose_name='UPC')
+    fna = models.CharField(max_length=20, verbose_name='FNA')
+
+    part_number = models.CharField(max_length=32, verbose_name='P/N-Part Number')
+    description_en = models.CharField(max_length=128, verbose_name='Description EN')
+    description_cn = models.CharField(max_length=128, null=True, blank=True, verbose_name='Description CN')
+
+    header_part_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Header Part Number')
+    ar_em_material_indicator = models.NullBooleanField(verbose_name='AR/EM Material Indicator')
+
+    work_shop = models.CharField(max_length=16, null=True, blank=True, verbose_name='Work Shop')
+    vendor_duns_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Duns / vendor number')
+    supplier_name = models.CharField(max_length=128, verbose_name='Supplier Name')
+    ewo_number = models.CharField(max_length=20, null=True, blank=True, verbose_name='Ewo Number')
+    model_and_option = models.CharField(max_length=1024, null=True, blank=True, verbose_name='Model & Option')
+    vpps = models.CharField(max_length=60, null=True, blank=True, verbose_name='VPPS')
+
+    class Meta:
+        verbose_name = 'EBOM 数据'
+        verbose_name_plural = 'EBOM 数据'
+
+    def __str__(self):
+        return self.part_number
+
+
+class EbomConfiguration(models.Model):
+    """ Configuration of EBOM """
+    bom = models.ForeignKey(Ebom, on_delete=models.CASCADE)
+
+    package = models.CharField(null=True, blank=True, max_length=64)
+    order_sample = models.CharField(null=True, blank=True, max_length=16)
+    quantity = models.IntegerField(default=0, verbose_name='Quantity')
+
+    def concat(self):
+        """ Configuration string """
+        conf_items = []
+
+        label = self.bom.label
+        conf_items.append(label.model if label else '')
+        conf_items += [self.package if self.package else ''] * 2
+        conf_items.append(self.order_sample if self.order_sample else '')
+
+        return '-'.join(conf_items)
+
+    class Meta:
+        verbose_name = 'EBOM 配置数据'
+        verbose_name_plural = 'EBOM 配置数据'
+
+    def __str__(self):
+        return self.concat()
