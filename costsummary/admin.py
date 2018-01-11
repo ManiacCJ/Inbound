@@ -4,8 +4,8 @@ from . import models
 
 
 # rename admin labels
-admin.site.site_header = 'Inbound 入厂物流成本'
 admin.site.index_title = '首页'
+admin.site.site_header = 'Inbound 入厂物流成本'
 admin.site.site_title = 'Inbound 数据管理'
 
 
