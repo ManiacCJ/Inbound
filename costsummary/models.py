@@ -94,6 +94,9 @@ class EbomConfiguration(models.Model):
         verbose_name = 'EBOM 配置数据'
         verbose_name_plural = 'EBOM 配置数据'
 
+        # composite primary key constraints
+        # unique_together = ("bom", "package", "order_sample")
+
     def __str__(self):
         return self.concat()
 
@@ -105,7 +108,7 @@ class AEbomEntry(models.Model):
 
     row_count = models.IntegerField(null=True, blank=True)
 
-    user = models.ForeignKey(User, null=True, default=None)
+    user = models.ForeignKey(User, null=True, blank=True, default=None)
     whether_loaded = models.BooleanField(default=False, verbose_name='是否已加载')
     etl_time = models.DateField(auto_now_add=True)
     loaded_time = models.DateTimeField(auto_now=True, null=True)

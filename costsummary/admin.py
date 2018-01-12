@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.db import connection as RawConnection
 
 from . import models
 
@@ -108,3 +110,71 @@ class AEbomEntryAdmin(admin.ModelAdmin):
         'row_count',
         'etl_time'
     )
+
+    def load(self, request, queryset):
+        """ Load ebom of selected labels """
+        for entry_object in queryset:
+            label = entry_object.label
+
+            if not entry_object.whether_loaded:
+                # fetch all ebom records
+                with RawConnection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT UPC, FNA, 
+                          COMPONENT_MATERIAL_NUMBER, COMPONENT_MATERIAL_DESC_E, COMPONENT_MATERIAL_DESC_C, 
+                          HEADER_PART_NUMBER, AR_EM_MATERIAL_FLAG, 
+                          WORKSHOP, DUNS_NUMBER, VENDOR_NAME, EWO_NUMBER, MODEL_OPTION, VPPS, 
+                          PACKAGE, ORDER_SAMPLE, USAGE_QTY
+                          FROM ta_ebom 
+                          WHERE MODEL_YEAR = %d AND BOOK = '%s' AND PLANT_CODE = '%s' AND MODEL = '%s'
+                    """ % (entry_object.model_year, label.book, label.plant_code, label.model))
+
+                    for row in cursor.fetchall():
+                        if row[6] == 'AR':
+                            _ar_em = True
+                        elif row[6] == 'EM':
+                            _ar_em = False
+                        else:
+                            _ar_em = None
+
+                        ebom_object, _ = models.Ebom.objects.get_or_create(
+                            label=label,
+                            upc=row[0],
+                            fna=row[1],
+                            part_number=row[2],
+                            description_en=row[3],
+                            description_cn=row[4],
+                            header_part_number=row[5],
+                            ar_em_material_indicator=_ar_em,
+                            work_shop=row[7],
+                            vendor_duns_number=row[8],
+                            supplier_name=row[9],
+                            ewo_number=row[10],
+                            model_and_option=row[11],
+                            vpps=row[12]
+                        )
+
+                        configuration_object = models.EbomConfiguration(
+                            bom=ebom_object,
+                            package=row[13],
+                            order_sample=row[14],
+                            quantity=row[15]
+                        )
+
+                        configuration_object.save()
+
+                    entry_object.whether_loaded = True
+                    entry_object.user = request.user
+                    entry_object.save()
+
+                self.message_user(request, f"{str(label)} successfully loaded.")
+
+            else:
+                self.message_user(request, f"{str(label)} has already loaded.")
+
+            return redirect(
+                'admin:costsummary_%s_changelist' % models.Ebom._meta.model_name)
+
+    load.short_description = "载入选中的车型"
+
+    actions = ['load']

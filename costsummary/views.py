@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-import django.db
+from django.db import connection as RawConnection
 from django import forms
 
 import django_excel
@@ -54,7 +54,7 @@ def test_upload(request):
 def group_ebom_by_label(request):
     """ Group ebom data by label. """
 
-    with django.db.connection.cursor() as cursor:
+    with RawConnection.cursor() as cursor:
         cursor.execute("""
             SELECT model_year, book, plant_code, model, count(1) FROM ta_ebom 
               GROUP BY model_year, book, plant_code, model
