@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -95,3 +96,30 @@ class EbomConfiguration(models.Model):
 
     def __str__(self):
         return self.concat()
+
+
+class AEbomEntry(models.Model):
+    """ Entry to load raw ebom data. """
+    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='车型')
+    model_year = models.IntegerField(null=True, blank=True)
+
+    row_count = models.IntegerField(null=True, blank=True)
+
+    user = models.ForeignKey(User, null=True, default=None)
+    whether_loaded = models.BooleanField(default=False, verbose_name='是否已加载')
+    etl_time = models.DateField(auto_now_add=True)
+    loaded_time = models.DateTimeField(auto_now=True, null=True)
+
+    class Meta:
+        verbose_name = 'EBOM 入口'
+        verbose_name_plural = 'EBOM 入口'
+
+    def __str__(self):
+        return str(self.label)
+
+    def save(self, *args, **kwargs):
+        # if not loaded, set loaded time to null
+        if not self.whether_loaded:
+            self.loaded_time = None
+
+        super().save(*args, **kwargs)

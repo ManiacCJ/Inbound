@@ -89,3 +89,22 @@ class EbomAdmin(admin.ModelAdmin):
     inlines = [
         EbomConfigurationInline
     ]
+
+
+@admin.register(models.AEbomEntry)
+class AEbomEntryAdmin(admin.ModelAdmin):
+    """ EBOM entry admin. """
+    list_display = (
+        'label',
+        'row_count',
+        'user',
+        'whether_loaded',
+        'etl_time',
+        'loaded_time',
+    )
+
+    list_filter = (
+        'label',
+        'row_count',
+        'etl_time'
+    )
