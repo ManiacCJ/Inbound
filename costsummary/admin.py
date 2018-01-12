@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.shortcuts import redirect
+from django.utils import timezone
 from django.db import connection as RawConnection
 
 from . import models
@@ -98,6 +99,7 @@ class AEbomEntryAdmin(admin.ModelAdmin):
     """ EBOM entry admin. """
     list_display = (
         'label',
+        'model_year',
         'row_count',
         'user',
         'whether_loaded',
@@ -107,8 +109,18 @@ class AEbomEntryAdmin(admin.ModelAdmin):
 
     list_filter = (
         'label',
+        'model_year',
         'row_count',
         'etl_time'
+    )
+
+    readonly_fields = (
+        'label',
+        'model_year',
+        'row_count',
+        'etl_time',
+        'loaded_time',
+        'user'
     )
 
     def load(self, request, queryset):
@@ -164,6 +176,7 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                         configuration_object.save()
 
                     entry_object.whether_loaded = True
+                    entry_object.loaded_time = timezone.now()
                     entry_object.user = request.user
                     entry_object.save()
 

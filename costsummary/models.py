@@ -54,11 +54,13 @@ class Ebom(models.Model):
     description_cn = models.CharField(max_length=128, null=True, blank=True, verbose_name='Description CN')
 
     header_part_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Header Part Number')
-    ar_em_material_indicator = models.NullBooleanField(verbose_name='AR/EM Material Indicator')
+
+    ar_em_choices = ((True, 'AR'), (False, 'EM'))
+    ar_em_material_indicator = models.NullBooleanField(verbose_name='AR/EM Material Indicator', choices=ar_em_choices)
 
     work_shop = models.CharField(max_length=16, null=True, blank=True, verbose_name='Work Shop')
     vendor_duns_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Duns / vendor number')
-    supplier_name = models.CharField(max_length=128, verbose_name='Supplier Name')
+    supplier_name = models.CharField(max_length=128, null=True, blank=True, verbose_name='Supplier Name')
     ewo_number = models.CharField(max_length=20, null=True, blank=True, verbose_name='Ewo Number')
     model_and_option = models.CharField(max_length=1024, null=True, blank=True, verbose_name='Model & Option')
     vpps = models.CharField(max_length=60, null=True, blank=True, verbose_name='VPPS')
@@ -111,7 +113,7 @@ class AEbomEntry(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, default=None)
     whether_loaded = models.BooleanField(default=False, verbose_name='是否已加载')
     etl_time = models.DateField(auto_now_add=True)
-    loaded_time = models.DateTimeField(auto_now=True, null=True)
+    loaded_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'EBOM 入口'
@@ -124,5 +126,6 @@ class AEbomEntry(models.Model):
         # if not loaded, set loaded time to null
         if not self.whether_loaded:
             self.loaded_time = None
+            self.user = None
 
         super().save(*args, **kwargs)
