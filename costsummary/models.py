@@ -402,3 +402,22 @@ class InboundAddress(models.Model):
                 self.distance_to_shanghai_cc = jq_distance.distance
 
         super().save(*args, **kwargs)
+
+
+class UploadHandler(models.Model):
+    """ Upload files. """
+    model_name_choice = (
+        (1, InboundTCS._meta.verbose_name),
+        (2, InboundBuyer._meta.verbose_name),
+    )
+    model_name = models.IntegerField(choices=model_name_choice)
+
+    file_to_be_uploaded = models.FileField(null=True, blank=True)
+    upload_time = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = '长传文件暂存'
+        verbose_name_plural = '长传文件暂存'
+
+    def __str__(self):
+        return str(self.upload_time)

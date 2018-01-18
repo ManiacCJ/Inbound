@@ -52,14 +52,14 @@
 
             <!-- upload buyer sheet -->
             <li>
-                <a href="#" class="addlink">
+                <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=2" class="addlink">
                     上传 采购信息表
                 </a>
             </li>
 
             <!-- upload tcs sheet -->
             <li>
-                <a href="#" class="addlink">
+                <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=1" class="addlink">
                     上传 TCS 物流跟踪表
                 </a>
             </li>

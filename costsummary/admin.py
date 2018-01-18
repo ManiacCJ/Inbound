@@ -309,3 +309,12 @@ class AEbomEntryAdmin(admin.ModelAdmin):
     load.short_description = "载入选中的车型"
 
     actions = ['load']
+
+
+@admin.register(models.UploadHandler)
+class UploadHandlerAdmin(admin.ModelAdmin):
+    """ Upload handler admin. """
+    list_display = [
+        'model_name',
+        'upload_time'
+    ]
