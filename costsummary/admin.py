@@ -1,6 +1,7 @@
 from django.contrib import admin
-from django.shortcuts import redirect
 from django.utils import timezone
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.db import connection as RawConnection
 
 from . import models
@@ -180,14 +181,20 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                     entry_object.user = request.user
                     entry_object.save()
 
-                self.message_user(request, f"{str(label)} successfully loaded.")
+                self.message_user(request, f"车型 {str(label)} 已成功加载.")
 
             else:
-                self.message_user(request, f"{str(label)} has already loaded.")
+                self.message_user(request, f"车型 {str(label)} 之前已加载.")
 
-            return redirect(
-                'admin:costsummary_%s_changelist' % models.Ebom._meta.model_name)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name) +
+                                        '?label__id__exact=%d' % queryset[0].label.id)
 
     load.short_description = "载入选中的车型"
 
     actions = ['load']
+
+
+# test admin
+admin.site.register(models.Question)
+admin.site.register(models.Choice)
+

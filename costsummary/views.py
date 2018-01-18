@@ -1,5 +1,5 @@
-from django.shortcuts import render
-from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.db import connection as RawConnection
 from django import forms
 
@@ -49,6 +49,42 @@ def test_upload(request):
     }
 
     return render(request, 'costsummary/test_upload_form.html', context)
+
+
+def import_data(request):
+    if request.method == "POST":
+        form = TestUploadFileForm(request.POST, request.FILES)
+
+        def choice_func(row):
+            q = models.Question.objects.filter(slug=row[0])[0]
+            row[0] = q
+            return row
+        if form.is_valid():
+            request.FILES['file'].save_book_to_database(
+                models=[models.Question, models.Choice],
+                initializers=[None, choice_func],
+                mapdicts=[
+                    ['question_text', 'pub_date', 'slug'],
+                    ['question', 'choice_text', 'votes']]
+            )
+            return redirect('handson_view')
+        else:
+            return HttpResponseBadRequest()
+    else:
+        form = TestUploadFileForm()
+    return render(
+        request,
+        'costsummary/test_upload_form.html',
+        {
+            'form': form,
+            'title': 'Import excel data into database example',
+            'header': 'Please upload sample-data.xls:'
+        })
+
+
+def handson_table(request):
+    return django_excel.make_response_from_tables(
+        [models.Question, models.Choice], 'test_handsontable.html')
 
 
 def group_ebom_by_label(request):

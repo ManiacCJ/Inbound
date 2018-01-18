@@ -12,4 +12,6 @@ urlpatterns = [
 
     # test functions
     url(r'^test/upload$', views.test_upload),
+    url(r'^test/import/', views.import_data, name="import"),
+    url(r'^test/handson_view/', views.handson_table, name="handson_view"),
 ]
