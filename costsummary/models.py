@@ -74,6 +74,9 @@ class SupplierDistance(models.Model):
         verbose_name = '供应商距离'
         verbose_name_plural = '供应商距离'
 
+    def __str__(self):
+        return self.get_base_display()
+
 
 class NominalLabelMapping(models.Model):
     """ Map book, plant code, model to vehicle label. """
@@ -131,7 +134,7 @@ class Ebom(models.Model):
         return self.part_number
 
     def save(self, *args, **kwargs):
-        _duns = self.vendor_duns_number.split('-')
+        _duns = self.vendor_duns_number.split('_')
 
         try:
             self.duns = int(_duns[0])
@@ -148,7 +151,7 @@ class Ebom(models.Model):
 
 class EbomConfiguration(models.Model):
     """ Configuration of EBOM """
-    bom = models.ForeignKey(Ebom, on_delete=models.CASCADE)
+    bom = models.ForeignKey(Ebom, on_delete=models.CASCADE, related_name='rel_configuration')
 
     package = models.CharField(null=True, blank=True, max_length=64)
     order_sample = models.CharField(null=True, blank=True, max_length=16)
@@ -206,7 +209,7 @@ class AEbomEntry(models.Model):
 
 class InboundTCS(models.Model):
     """ TCS data. """
-    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_tcs')
 
     bidder_list_number = models.CharField(max_length=64, null=True, blank=True, verbose_name='Bidder号')
     program = models.CharField(max_length=64, null=True, blank=True, verbose_name='定点项目')
@@ -314,13 +317,13 @@ class InboundTCS(models.Model):
         verbose_name = 'TCS定点 信息'
         verbose_name_plural = 'TCS定点 信息'
 
-    # def __str__(self):
-    #     return str(self.bom)
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
 
 
 class InboundBuyer(models.Model):
     """ Buyer data. """
-    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_buyer')
 
     buyer = models.CharField(max_length=64, null=True, blank=True, verbose_name='采购员')
     contract_incoterm = models.CharField(max_length=64, null=True, blank=True, verbose_name='合同条款')
@@ -332,19 +335,27 @@ class InboundBuyer(models.Model):
         verbose_name = '采购 信息'
         verbose_name_plural = '采购 信息'
 
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
 
 class InboundAddress(models.Model):
     """ Inbound address. """
-    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_address')
 
     property_choice = ((1, '国产'), (2, '进口'), (3, '自制'))
     property = models.IntegerField(choices=property_choice, null=True, blank=True, verbose_name='国产/进口/自制')
+
+    supplier_matched = models.ForeignKey(Supplier, null=True, blank=True, verbose_name='供应商 (匹配DUNS)')
 
     region_division = models.CharField(max_length=64, null=True, blank=True, verbose_name='区域划分')
     country = models.CharField(max_length=64, null=True, blank=True, verbose_name='国家')
     province = models.CharField(max_length=64, null=True, blank=True, verbose_name='省')
     city = models.CharField(max_length=64, null=True, blank=True, verbose_name='市')
     mfg_location = models.CharField(max_length=128, null=True, blank=True, verbose_name='生产地址')
+
+    supplier_distance_matched = models.ForeignKey(SupplierDistance, null=True, blank=True,
+                                                  verbose_name='SGM PLANT')
 
     distance_to_sgm_plant = models.FloatField(null=True, blank=True, verbose_name='运输距离-至生产厂区')
     distance_to_shanghai_cc = models.FloatField(null=True, blank=True, verbose_name='运输距离-金桥C类')
@@ -355,10 +366,40 @@ class InboundAddress(models.Model):
         verbose_name = '最终地址梳理'
         verbose_name_plural = '最终地址梳理'
 
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
     def save(self, *args, **kwargs):
         # match supplier
-        if self.bom.duns:
-            pass
+        if self.supplier_matched:
+            if self.supplier_matched.region and self.supplier_matched.region[0: 2] in [
+                '江浙',
+                '华中',
+                '华北',
+                '东北',
+                '华南',
+                '西南',
+                '华中',
+                '西北',
+                '华东',
+                '中国',
+            ]:
+                self.country = '中国'
+
+            self.region_division = self.supplier_matched.region
+            self.province = self.supplier_matched.province
+            self.city = self.supplier_matched.district
+            self.mfg_location = self.supplier_matched.address
+
+        # match distance
+        if self.supplier_distance_matched:
+            self.distance_to_sgm_plant = self.supplier_distance_matched.distance
+
+        if self.supplier_matched:
+            jq_distance = SupplierDistance.objects.filter(supplier=self.supplier_matched, base=0).first()
+
+            if jq_distance:
+                self.distance_to_shanghai_cc = jq_distance.distance
 
         super().save(*args, **kwargs)
 

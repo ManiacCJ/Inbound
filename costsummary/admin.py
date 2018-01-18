@@ -1,3 +1,4 @@
+from django.forms import ModelForm
 from django.contrib import admin
 from django.utils import timezone
 from django.http import HttpResponseRedirect
@@ -119,7 +120,29 @@ class InboundBuyerInline(admin.StackedInline):
     extra = 0
 
 
+class SupplierDistanceForm(ModelForm):
+    """ Limit supplier dropdown list. """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if hasattr(self, 'instance') and self.instance.id and self.instance.bom.duns:
+            self.fields['supplier_matched'].queryset = models.Supplier.objects.filter(duns=self.instance.bom.duns)
+
+            if self.instance.supplier_matched:
+                self.fields['supplier_distance_matched'].queryset = models.SupplierDistance.objects.filter(
+                    supplier=self.instance.supplier_matched,
+                    base__gte=0
+                )
+            else:
+                self.fields['supplier_distance_matched'].queryset = models.SupplierDistance.objects.filter(
+                    supplier__duns=self.instance.bom.duns,
+                    base__gte=0
+                )
+
+
 class InboundAddressInline(admin.StackedInline):
+    form = SupplierDistanceForm
     model = models.InboundAddress
     extra = 0
 
@@ -238,6 +261,36 @@ class AEbomEntryAdmin(admin.ModelAdmin):
 
                         configuration_object.save()
 
+                        # create related object
+                        # tcs object
+                        if not hasattr(ebom_object, 'rel_tcs'):
+                            tcs_object = models.InboundTCS(
+                                bom=ebom_object
+                            )
+                            tcs_object.save()
+
+                        # buyer object
+                        if not hasattr(ebom_object, 'rel_buyer'):
+                            buyer_object = models.InboundBuyer(
+                                bom=ebom_object
+                            )
+                            buyer_object.save()
+
+                        # address object
+                        if not hasattr(ebom_object, 'rel_address'):
+                            address_object = models.InboundAddress(
+                                bom=ebom_object
+                            )
+
+                            if ebom_object.duns:
+                                supplier_queryset = models.Supplier.objects.filter(duns=ebom_object.duns)
+
+                                if supplier_queryset.count() == 1:
+                                    address_object.supplier_matched = supplier_queryset.first()
+
+                            address_object.save()
+
+                    # update entry object
                     entry_object.whether_loaded = True
                     entry_object.loaded_time = timezone.now()
                     entry_object.user = request.user
