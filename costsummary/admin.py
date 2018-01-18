@@ -150,6 +150,8 @@ class InboundAddressInline(admin.StackedInline):
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
+    change_list_template = 'costsummary/change_list.html'
+
     list_display = (
         'part_number',
         'label',
