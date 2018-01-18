@@ -62,6 +62,11 @@ class EbomConfigurationInline(admin.StackedInline):
     extra = 0
 
 
+class InboundTCSInline(admin.StackedInline):
+    model = models.InboundTCS
+    extra = 0
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -91,7 +96,7 @@ class EbomAdmin(admin.ModelAdmin):
     )
 
     inlines = [
-        EbomConfigurationInline
+        EbomConfigurationInline, InboundTCSInline
     ]
 
 
