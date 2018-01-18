@@ -309,9 +309,3 @@ class AEbomEntryAdmin(admin.ModelAdmin):
     load.short_description = "载入选中的车型"
 
     actions = ['load']
-
-
-# test admin
-admin.site.register(models.Question)
-admin.site.register(models.Choice)
-

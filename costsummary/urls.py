@@ -9,10 +9,5 @@ urlpatterns = [
     url(r'^initialize/nl$', views.initialize_data, {'data': 'nl'}),
     url(r'^initialize/supplier', views.initialize_data, {'data': 'supplier'}),
 
-    url(r'^entry$', views.group_ebom_by_label, name='entry'),
-
-    # test functions
-    url(r'^test/upload$', views.test_upload),
-    url(r'^test/import/', views.import_data, name="import"),
-    url(r'^test/handson_view/', views.handson_table, name="handson_view"),
+    url(r'^entry$', views.group_ebom_by_label, name='entry')
 ]
