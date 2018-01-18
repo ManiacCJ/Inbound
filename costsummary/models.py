@@ -2,23 +2,77 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+# constants
+BASE_CHOICE = (
+        (0, 'JQ'),
+        (1, 'DY'),
+        (3, 'NS'),
+        (4, 'WH'),
+        (-1, '3rd Party')
+    )
+
+
 # Create your models here.
 class TecCore(models.Model):
     """ Tec id & part name (English). """
     tec_id = models.IntegerField(primary_key=True, verbose_name='TEC No.')
     common_part_name = models.CharField(unique=True, max_length=128, verbose_name='Common Part Name')
+    mgo_part_name_list = models.CharField(max_length=512, verbose_name='MGO Part Name & Tech Example DMU')
 
     class Meta:
         verbose_name = 'TEC Part Name'
         verbose_name_plural = 'TEC Part Name'
 
     def __str__(self):
-        return self.common_part_name
+        return str(self.tec_id)
 
     def save(self, *args, **kwargs):
         """ Override default save action. """
         self.common_part_name = self.common_part_name.upper()  # upper case.
+        self.mgo_part_name = self.mgo_part_name_list.upper()
+
         super().save(self, *args, **kwargs)
+
+
+class Supplier(models.Model):
+    """ Supplier information. Corresponding sheet: MR大合集"""
+    original_source = models.CharField(max_length=64, null=True, blank=True, verbose_name='数据来源')
+
+    is_mono_address = models.NullBooleanField(verbose_name='是否唯一出货地址')
+    is_promised_address = models.NullBooleanField(verbose_name='是否承诺地址')
+
+    duns = models.CharField(max_length=32, verbose_name='DUNS编码')
+    name = models.CharField(max_length=64, verbose_name='取货供应商')
+    address = models.CharField(max_length=64, verbose_name='取货地址')
+
+    post_code = models.CharField(max_length=16, verbose_name='邮编')
+    region = models.CharField(max_length=16, verbose_name='区域划分')
+    province = models.CharField(max_length=16, verbose_name='省份')
+    district = models.CharField(max_length=16, verbose_name='区域')
+
+    comment = models.TextField(null=True, blank=True, verbose_name='备注(生产零件,项目等)')
+    is_removable = models.NullBooleanField(verbose_name='后续是否去除')
+
+    class Meta:
+        verbose_name = '供应商'
+        verbose_name_plural = '供应商'
+
+    def __str__(self):
+        return self.name + ' -- ' + self.address
+
+
+class SupplierDistance(models.Model):
+    """ The distances from supplier to bases. """
+    base = models.IntegerField(choices=BASE_CHOICE)
+    distance = models.FloatField(null=True, blank=True)
+
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
+
+    comment = models.CharField(max_length=16, null=True, blank=True, verbose_name='线路备注')
+
+    class Meta:
+        verbose_name = '供应商距离'
+        verbose_name_plural = '供应商距离'
 
 
 class NominalLabelMapping(models.Model):
@@ -65,12 +119,31 @@ class Ebom(models.Model):
     model_and_option = models.CharField(max_length=1024, null=True, blank=True, verbose_name='Model & Option')
     vpps = models.CharField(max_length=60, null=True, blank=True, verbose_name='VPPS')
 
+    # dependent field
+    duns = models.CharField(max_length=32, null=True, blank=True, editable=False)
+    tec = models.ForeignKey(TecCore, null=True, blank=True, verbose_name='TEC No.')
+
     class Meta:
         verbose_name = 'EBOM 数据'
         verbose_name_plural = 'EBOM 数据'
 
     def __str__(self):
         return self.part_number
+
+    def save(self, *args, **kwargs):
+        _duns = self.vendor_duns_number.split('-')
+
+        try:
+            self.duns = int(_duns[0])
+
+        except ValueError as e:
+            print(e)
+            self.duns = None
+
+        if self.description_en:
+            self.tec = TecCore.objects.filter(mgo_part_name_list__contains=self.description_en.upper()).first()
+
+        super().save(*args, **kwargs)
 
 
 class EbomConfiguration(models.Model):
@@ -264,7 +337,9 @@ class InboundAddress(models.Model):
     """ Inbound address. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
 
-    property = models.CharField(max_length=8, null=True, blank=True, verbose_name='国产/进口/自制')
+    property_choice = ((1, '国产'), (2, '进口'), (3, '自制'))
+    property = models.IntegerField(choices=property_choice, null=True, blank=True, verbose_name='国产/进口/自制')
+
     region_division = models.CharField(max_length=64, null=True, blank=True, verbose_name='区域划分')
     country = models.CharField(max_length=64, null=True, blank=True, verbose_name='国家')
     province = models.CharField(max_length=64, null=True, blank=True, verbose_name='省')
@@ -279,6 +354,13 @@ class InboundAddress(models.Model):
     class Meta:
         verbose_name = '最终地址梳理'
         verbose_name_plural = '最终地址梳理'
+
+    def save(self, *args, **kwargs):
+        # match supplier
+        if self.bom.duns:
+            pass
+
+        super().save(*args, **kwargs)
 
 
 # test models for excel output

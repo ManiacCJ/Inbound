@@ -21,6 +21,9 @@ def initialize_data(request, data):
     elif data == 'nl':
         row_count = InitializeData.load_initial_nl_mapping()
 
+    elif data == 'supplier':
+        row_count = InitializeData.load_initial_distance()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 

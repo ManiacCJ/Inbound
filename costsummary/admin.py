@@ -34,6 +34,53 @@ class TecCoreAdmin(admin.ModelAdmin):
     ]
 
 
+class SupplierDistanceInline(admin.TabularInline):
+    """ Edit distance in supplier admin page """
+    model = models.SupplierDistance
+    max_num = 4
+    extra = 0
+
+
+@admin.register(models.Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    """ Supplier admin class """
+    list_display = (
+        'duns',
+        'name',
+        'original_source',
+        'is_mono_address',
+        'is_promised_address',
+        'address',
+        'post_code',
+        'region',
+        'province',
+        'district',
+        'comment',
+        'is_removable'
+    )
+
+    search_fields = [
+        'original_source',
+        'duns',
+        'name',
+        'address',
+        'region',
+        'province',
+        'district'
+    ]
+
+    list_filter = (
+        'original_source',
+        'is_mono_address',
+        'is_promised_address',
+        'province'
+    )
+
+    inlines = [
+        SupplierDistanceInline
+    ]
+
+
 @admin.register(models.NominalLabelMapping)
 class NominalLabelMappingAdmin(admin.ModelAdmin):
     """Nominal label mapping admin. """
