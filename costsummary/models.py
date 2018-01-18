@@ -132,6 +132,7 @@ class AEbomEntry(models.Model):
 
 
 class InboundTCS(models.Model):
+    """ TCS data. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
 
     bidder_list_number = models.CharField(max_length=64, null=True, blank=True, verbose_name='Bidder号')
@@ -240,8 +241,44 @@ class InboundTCS(models.Model):
         verbose_name = 'TCS定点 信息'
         verbose_name_plural = 'TCS定点 信息'
 
-    def __str__(self):
-        return str(self.bom)
+    # def __str__(self):
+    #     return str(self.bom)
+
+
+class InboundBuyer(models.Model):
+    """ Buyer data. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
+
+    buyer = models.CharField(max_length=64, null=True, blank=True, verbose_name='采购员')
+    contract_incoterm = models.CharField(max_length=64, null=True, blank=True, verbose_name='合同条款')
+    contract_supplier_transportation_cost = models.FloatField(null=True, blank=True, verbose_name='供应商运费')
+    contract_supplier_pkg_cost = models.FloatField(null=True, blank=True, verbose_name='供应商外包装费')
+    contract_supplier_seq_cost = models.FloatField(null=True, blank=True, verbose_name='供应商排序费')
+
+    class Meta:
+        verbose_name = '采购 信息'
+        verbose_name_plural = '采购 信息'
+
+
+class InboundAddress(models.Model):
+    """ Inbound address. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE)
+
+    property = models.CharField(max_length=8, null=True, blank=True, verbose_name='国产/进口/自制')
+    region_division = models.CharField(max_length=64, null=True, blank=True, verbose_name='区域划分')
+    country = models.CharField(max_length=64, null=True, blank=True, verbose_name='国家')
+    province = models.CharField(max_length=64, null=True, blank=True, verbose_name='省')
+    city = models.CharField(max_length=64, null=True, blank=True, verbose_name='市')
+    mfg_location = models.CharField(max_length=128, null=True, blank=True, verbose_name='生产地址')
+
+    distance_to_sgm_plant = models.FloatField(null=True, blank=True, verbose_name='运输距离-至生产厂区')
+    distance_to_shanghai_cc = models.FloatField(null=True, blank=True, verbose_name='运输距离-金桥C类')
+    warehouse_address = models.CharField(max_length=32, null=True, blank=True, verbose_name='中转库地址')
+    warehouse_to_sgm_plant = models.FloatField(null=True, blank=True, verbose_name='中转库运输距离')
+
+    class Meta:
+        verbose_name = '最终地址梳理'
+        verbose_name_plural = '最终地址梳理'
 
 
 # test models for excel output
