@@ -1,10 +1,10 @@
 import os
 import csv
 from django.db import IntegrityError
+from django.shortcuts import Http404
 from django.core.exceptions import ValidationError
 
 from . import models
-
 
 # Persistence directory
 PERSISTENCE_DIR = os.path.join(
@@ -276,3 +276,69 @@ class InitializeData:
                 index += 1
 
         return index
+
+
+class ParseArray:
+    """ Parse two-dimensional array of excel. """
+
+    @staticmethod
+    def parse_tcs(matrix: list):
+        """ Parse TCS data. """
+        # tcs header
+        TCS_HEADER = [
+            {'r_offset': 0, 'ex_header': 'P/N', 'in_header': 'bom:part_number'},
+            {'r_offset': 0, 'ex_header': 'Bidderlist No.', 'in_header': 'bidder_list_number'},
+            {'r_offset': 0, 'ex_header': 'Program', 'in_header': 'program'},
+            {'r_offset': 0, 'ex_header': 'Supplier Address', 'in_header': 'supplier_ship_from_address'},
+            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process'},
+            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method'},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Transport Duty', 'in_header': 'sgm_transport_duty'},
+            {'r_offset': 0, 'ex_header': 'Supplier\'s Transport Duty', 'in_header': 'supplier_transport_duty'},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Returnable Package Duty', 'in_header': 'sgm_returnable_duty'},
+            {'r_offset': 0, 'ex_header': 'Supplier\'s Returnable Package Duty',
+             'in_header': 'supplier_returnable_duty'},
+            {'r_offset': -1, 'ex_header': '外协加工业务模式\nConsignment Mode', 'in_header': 'consignment_mode'},
+        ]
+
+        for i in range(len(TCS_HEADER)):
+            TCS_HEADER[i]['ex_header'] = TCS_HEADER[i]['ex_header'].upper()  # upper-case
+
+        # cursor
+        for i in range(len(matrix)):
+            all_header_found = True
+
+            # all header field found
+            for dict_obj in TCS_HEADER:
+                if 'col' not in dict_obj:
+                    all_header_found = False
+                    break
+
+            if all_header_found:
+                break
+
+            row = matrix[i]
+
+            for j in range(len(row)):
+                cell = row[j]
+
+                for k in range(len(TCS_HEADER)):
+                    if cell.strip().upper() == TCS_HEADER[k]['ex_header']:
+                        TCS_HEADER[k]['col'] = j
+                        TCS_HEADER[k]['row'] = i
+
+        # check header row
+        data_row = None
+
+        print(TCS_HEADER)
+
+        for dict_obj in TCS_HEADER:
+            if 'col' not in dict_obj or 'row' not in dict_obj:
+                raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
+            else:
+                if data_row is not None:
+                    if dict_obj['row'] - dict_obj['r_offset'] != data_row:
+                        raise Http404('Excel 格式不正确.')
+                else:
+                    data_row = dict_obj['row'] + dict_obj['r_offset']
+
+        print(TCS_HEADER)

@@ -416,8 +416,8 @@ class UploadHandler(models.Model):
     upload_time = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        verbose_name = '长传文件暂存'
-        verbose_name_plural = '长传文件暂存'
+        verbose_name = '上传文件暂存'
+        verbose_name_plural = '上传文件暂存'
 
     def __str__(self):
         return str(self.upload_time)

@@ -5,7 +5,10 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.db import connection as RawConnection
 
+# import django_excel
+
 from . import models
+from .dumps import ParseArray
 
 
 # rename admin labels
@@ -318,3 +321,23 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         'model_name',
         'upload_time'
     ]
+
+    # # override save behavior
+    # def save_model(self, request, obj, form, change):
+    #     super().save_model(request, obj, form, change)
+    #
+    #     # obj = models.UploadHandler(obj)
+    #     django_excel.make_response(obj.file_to_be_uploaded.get_sheet(), 'xls', file_name='download')
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """ Redirect when add work completed. """
+        post_file = request.FILES['file_to_be_uploaded']
+
+        # default the only first sheet
+        matrix = post_file.get_array()
+
+        if obj.model_name == 1:
+            # TCS data
+            ParseArray.parse_tcs(matrix)
+
+        return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name))
