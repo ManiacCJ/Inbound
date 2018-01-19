@@ -290,14 +290,19 @@ class ParseArray:
             {'r_offset': 0, 'ex_header': 'Bidderlist No.', 'in_header': 'bidder_list_number'},
             {'r_offset': 0, 'ex_header': 'Program', 'in_header': 'program'},
             {'r_offset': 0, 'ex_header': 'Supplier Address', 'in_header': 'supplier_ship_from_address'},
-            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process'},
-            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method'},
-            {'r_offset': 0, 'ex_header': 'SGM\'s Transport Duty', 'in_header': 'sgm_transport_duty'},
-            {'r_offset': 0, 'ex_header': 'Supplier\'s Transport Duty', 'in_header': 'supplier_transport_duty'},
-            {'r_offset': 0, 'ex_header': 'SGM\'s Returnable Package Duty', 'in_header': 'sgm_returnable_duty'},
+            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process', 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Transport Duty', 'in_header': 'sgm_transport_duty',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Supplier\'s Transport Duty', 'in_header': 'supplier_transport_duty',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Returnable Package Duty', 'in_header': 'sgm_returnable_duty',
+             'match_display': True},
             {'r_offset': 0, 'ex_header': 'Supplier\'s Returnable Package Duty',
-             'in_header': 'supplier_returnable_duty'},
-            {'r_offset': -1, 'ex_header': '外协加工业务模式\nConsignment Mode', 'in_header': 'consignment_mode'},
+             'in_header': 'supplier_returnable_duty', 'match_display': True},
+            {'r_offset': -1, 'ex_header': '外协加工业务模式\nConsignment Mode', 'in_header': 'consignment_mode',
+             'match_display': True},
         ]
 
         for i in range(len(TCS_HEADER)):
@@ -329,8 +334,6 @@ class ParseArray:
         # check header row
         data_row = None
 
-        print(TCS_HEADER)
-
         for dict_obj in TCS_HEADER:
             if 'col' not in dict_obj or 'row' not in dict_obj:
                 raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
@@ -341,4 +344,35 @@ class ParseArray:
                 else:
                     data_row = dict_obj['row'] + dict_obj['r_offset']
 
-        print(TCS_HEADER)
+        # start parsing row
+        start_row = data_row + 1
+
+        for row in matrix[start_row:]:
+            lookup_value = row[TCS_HEADER[0]['col']]
+
+            try:
+                tcs_objects = models.InboundTCS.objects.filter(bom__part_number=int(lookup_value))
+
+            except ValueError as e:
+                print(e)
+                pass
+
+            else:
+                for tcs_object in tcs_objects:
+                    params = dict()
+
+                    for dict_obj in TCS_HEADER[1:]:
+                        if 'match_display' in dict_obj:
+                            choice = getattr(tcs_object, dict_obj['in_header'] + '_choice')
+
+                            for int_val, str_val in choice:
+                                if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                    params[dict_obj['in_header']] = int_val
+
+                        else:
+                            params[dict_obj['in_header']] = row[dict_obj['col']]
+
+                    for attribute in params:
+                        setattr(tcs_object, attribute, params[attribute])
+
+                    tcs_object.save()
