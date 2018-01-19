@@ -322,12 +322,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         'upload_time'
     ]
 
-    # # override save behavior
-    # def save_model(self, request, obj, form, change):
-    #     super().save_model(request, obj, form, change)
-    #
-    #     # obj = models.UploadHandler(obj)
-    #     django_excel.make_response(obj.file_to_be_uploaded.get_sheet(), 'xls', file_name='download')
+    readonly_fields = [
+        'download_tcs_template'
+    ]
 
     def response_add(self, request, obj, post_url_continue=None):
         """ Redirect when add work completed. """
@@ -341,3 +338,11 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             ParseArray.parse_tcs(matrix)
 
         return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name))
+
+    def download_tcs_template(self, obj):
+        """ Download tcs template. """
+        _, _ = self, obj
+        return '<a href="/costsummary/sheet/tcs">下载</a>'
+
+    download_tcs_template.short_description = 'TCS 物流跟踪表模板'
+    download_tcs_template.allow_tags = True

@@ -350,6 +350,10 @@ class ParseArray:
         for row in matrix[start_row:]:
             lookup_value = row[TCS_HEADER[0]['col']]
 
+            # if no actual value
+            if lookup_value == '':
+                continue
+
             try:
                 tcs_objects = models.InboundTCS.objects.filter(bom__part_number=int(lookup_value))
 
@@ -368,11 +372,14 @@ class ParseArray:
                             for int_val, str_val in choice:
                                 if row[dict_obj['col']].strip().upper() == str_val.upper():
                                     params[dict_obj['in_header']] = int_val
+                                    break
 
                         else:
                             params[dict_obj['in_header']] = row[dict_obj['col']]
 
                     for attribute in params:
+                        if params[attribute] == '':
+                            params[attribute] = None
                         setattr(tcs_object, attribute, params[attribute])
 
                     tcs_object.save()

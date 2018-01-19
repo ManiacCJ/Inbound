@@ -1,12 +1,10 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseBadRequest
-from django.db import connection as RawConnection
-from django import forms
+import os
 
-import django_excel
+from django.http import HttpResponse
+from django.db import connection as RawConnection
 
 from . import models
-from .dumps import InitializeData
+from .dumps import InitializeData, PERSISTENCE_DIR
 
 
 # Create your views here.
@@ -55,3 +53,13 @@ def group_ebom_by_label(request):
             index += 1
 
         return HttpResponse(f'{index} entries generated.')
+
+
+def download_sheet_template(request, sheet):
+    """ Download sheet template. """
+    if sheet == 'tcs':
+        dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/tcs.xls')
+
+    with open(dst_file, 'rb') as xl_handler:
+        response = HttpResponse(xl_handler, content_type='application/vnd.ms-excel')
+        return response
