@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.shortcuts import Http404
 from django.db import connection as RawConnection
 
 # import django_excel
@@ -337,12 +338,25 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             # TCS data
             ParseArray.parse_tcs(matrix)
 
+        elif obj.model_name == 2:
+            # Buyer data
+            ParseArray.parse_buyer(matrix)
+
+        else:
+            raise Http404('无法识别的数据模式.')
+
         return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name))
 
     def download_tcs_template(self, obj):
         """ Download tcs template. """
-        _, _ = self, obj
-        return '<a href="/costsummary/sheet/tcs">下载</a>'
+        _ = self
+
+        if obj.model_name == 1:
+            return '<a href="/costsummary/sheet/tcs">下载</a>'
+        elif obj.model_name == 2:
+            return '<a href="/costsummary/sheet/buyer">下载</a>'
+        else:
+            return '<a href="#">下载</a>'
 
     download_tcs_template.short_description = 'TCS 物流跟踪表模板'
     download_tcs_template.allow_tags = True

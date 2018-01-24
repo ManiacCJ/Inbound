@@ -383,3 +383,95 @@ class ParseArray:
                         setattr(tcs_object, attribute, params[attribute])
 
                     tcs_object.save()
+
+    @staticmethod
+    def parse_buyer(matrix: list):
+        """ Parse TCS data. """
+        # buyer header
+        BUYER_HEADER = [
+            {'r_offset': 0, 'ex_header': '零件号', 'in_header': 'bom:part_number'},
+            {'r_offset': 0, 'ex_header': '采购员', 'in_header': 'buyer'},
+            {'r_offset': 0, 'ex_header': '计量单位', 'in_header': 'contract_incoterm'},
+            {'r_offset': 0, 'ex_header': '运输费用', 'in_header': 'contract_supplier_transportation_cost'},
+            {'r_offset': 0, 'ex_header': '外包装费用', 'in_header': 'contract_supplier_pkg_cost'},
+            {'r_offset': 0, 'ex_header': '排序费用', 'in_header': 'contract_supplier_seq_cost'},
+        ]
+
+        for i in range(len(BUYER_HEADER)):
+            BUYER_HEADER[i]['ex_header'] = BUYER_HEADER[i]['ex_header'].upper()  # upper-case
+
+        # cursor
+        for i in range(len(matrix)):
+            all_header_found = True
+
+            # all header field found
+            for dict_obj in BUYER_HEADER:
+                if 'col' not in dict_obj:
+                    all_header_found = False
+                    break
+
+            if all_header_found:
+                break
+
+            row = matrix[i]
+
+            for j in range(len(row)):
+                cell = row[j]
+
+                for k in range(len(BUYER_HEADER)):
+                    if cell.strip().upper() == BUYER_HEADER[k]['ex_header']:
+                        BUYER_HEADER[k]['col'] = j
+                        BUYER_HEADER[k]['row'] = i
+
+        # check header row
+        data_row = None
+
+        for dict_obj in BUYER_HEADER:
+            if 'col' not in dict_obj or 'row' not in dict_obj:
+                raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
+            else:
+                if data_row is not None:
+                    if dict_obj['row'] - dict_obj['r_offset'] != data_row:
+                        raise Http404('Excel 格式不正确.')
+                else:
+                    data_row = dict_obj['row'] + dict_obj['r_offset']
+
+        # start parsing row
+        start_row = data_row + 1
+
+        for row in matrix[start_row:]:
+            lookup_value = row[BUYER_HEADER[0]['col']]
+
+            # if no actual value
+            if lookup_value == '':
+                continue
+
+            try:
+                buyer_objects = models.InboundBuyer.objects.filter(bom__part_number=int(lookup_value))
+
+            except ValueError as e:
+                print(e)
+                pass
+
+            else:
+                for buyer_object in buyer_objects:
+                    params = dict()
+
+                    for dict_obj in BUYER_HEADER[1:]:
+                        if 'match_display' in dict_obj:
+                            choice = getattr(buyer_object, dict_obj['in_header'] + '_choice')
+
+                            for int_val, str_val in choice:
+                                if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                    params[dict_obj['in_header']] = int_val
+                                    break
+
+                        else:
+                            params[dict_obj['in_header']] = row[dict_obj['col']]
+
+                    for attribute in params:
+                        if params[attribute] == '':
+                            params[attribute] = None
+                        setattr(buyer_object, attribute, params[attribute])
+
+                    buyer_object.save()

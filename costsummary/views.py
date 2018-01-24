@@ -2,6 +2,7 @@ import os
 
 from django.http import HttpResponse
 from django.db import connection as RawConnection
+from django.shortcuts import Http404
 
 from . import models
 from .dumps import InitializeData, PERSISTENCE_DIR
@@ -57,8 +58,15 @@ def group_ebom_by_label(request):
 
 def download_sheet_template(request, sheet):
     """ Download sheet template. """
+    dst_file = None
+
     if sheet == 'tcs':
         dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/tcs.xls')
+    elif sheet == 'buyer':
+        dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/buyer.xls')
+
+    if not dst_file:
+        raise Http404('未知文件模板.')
 
     with open(dst_file, 'rb') as xl_handler:
         response = HttpResponse(xl_handler, content_type='application/vnd.ms-excel')

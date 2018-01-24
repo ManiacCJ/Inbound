@@ -1,15 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 # constants
 BASE_CHOICE = (
-        (0, 'JQ'),
-        (1, 'DY'),
-        (3, 'NS'),
-        (4, 'WH'),
-        (-1, '3rd Party')
-    )
+    (0, 'JQ'),
+    (1, 'DY'),
+    (3, 'NS'),
+    (4, 'WH'),
+    (-1, '3rd Party')
+)
 
 
 # Create your models here.
@@ -402,6 +401,34 @@ class InboundAddress(models.Model):
                 self.distance_to_shanghai_cc = jq_distance.distance
 
         super().save(*args, **kwargs)
+
+
+class InboundTCSPackage(models.Model):
+    """ Inbound TCS package. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_tcs_package')
+
+    supplier_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='供应商出厂包装PK Name')
+    supplier_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PKPCS')
+    supplier_pkg_length = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PL')
+    supplier_pkg_width = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PW')
+    supplier_pkg_height = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PH')
+    supplier_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装折叠率')
+    supplier_pkg_cubic_pcs = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装Cubic/Pcs')
+    supplier_pkg_cubic_veh = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装Cubic/Veh')
+
+    sgm_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='先期规划包装PK Name')
+    sgm_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='先期规划包装PKPCS')
+    sgm_pkg_length = models.FloatField(null=True, blank=True, verbose_name='先期规划包装PL')
+    sgm_pkg_width = models.FloatField(null=True, blank=True, verbose_name='先期规划包装PW')
+    sgm_pkg_height = models.FloatField(null=True, blank=True, verbose_name='先期规划包装PH')
+    sgm_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='先期规划包装折叠率')
+
+    class Meta:
+        verbose_name = 'TCS包装信息'
+        verbose_name_plural = 'TCS包装信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
 
 
 class UploadHandler(models.Model):
