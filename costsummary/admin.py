@@ -186,7 +186,7 @@ class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
     change_list_template = 'costsummary/change_list.html'
 
-    list_per_page = 64
+    list_per_page = 8
 
     list_display = (
         'part_number',
@@ -205,11 +205,11 @@ class EbomAdmin(admin.ModelAdmin):
         'model_and_option',
         'vpps',
         'get_inboundaddress_fu_address', 'get_inboundaddress_mr_address', 'get_inboundaddress_property',
-        'get_inboundaddress_supplier_matched', 'get_inboundaddress_region_division', 'get_inboundaddress_country',
+        'get_inboundaddress_region_division', 'get_inboundaddress_country',
         'get_inboundaddress_province', 'get_inboundaddress_city', 'get_inboundaddress_mfg_location',
-        'get_inboundaddress_supplier_distance_matched', 'get_inboundaddress_distance_to_sgm_plant',
+        'get_inboundaddress_distance_to_sgm_plant',
         'get_inboundaddress_distance_to_shanghai_cc', 'get_inboundaddress_warehouse_address',
-        'get_inboundaddress_warehouse_to_sgm_plant', 'get_inboundbuyer_buyer', 'get_inboundbuyer_contract_incoterm',
+        'get_inboundbuyer_buyer', 'get_inboundbuyer_contract_incoterm',
         'get_inboundbuyer_contract_supplier_transportation_cost', 'get_inboundbuyer_contract_supplier_pkg_cost',
         'get_inboundbuyer_contract_supplier_seq_cost', 'get_inboundheaderpart_head_part_number',
         'get_inboundheaderpart_assembly_supplier', 'get_inboundheaderpart_color',
@@ -279,7 +279,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_fu_address.short_description = '运作功能块地址 & 最终地址梳理/FU提供的原始地址信息'
+    get_inboundaddress_fu_address.short_description = '运作功能块地址/FU提供的原始地址信息'
 
     def get_inboundaddress_mr_address(self, obj):
         """ 运作功能块地址 & 最终地址梳理, MR取货地址 """
@@ -293,7 +293,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_mr_address.short_description = '运作功能块地址 & 最终地址梳理/MR取货地址'
+    get_inboundaddress_mr_address.short_description = '运作功能块地址/MR取货地址'
 
     def get_inboundaddress_property(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 国产/进口/自制 """
@@ -307,21 +307,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_property.short_description = '运作功能块地址 & 最终地址梳理/国产/进口/自制'
-
-    def get_inboundaddress_supplier_matched(self, obj):
-        """ 运作功能块地址 & 最终地址梳理, 供应商 (匹配DUNS) """
-        _ = self
-
-        if hasattr(obj, 'rel_address'):
-            rel_obj = obj.rel_address
-
-            if hasattr(rel_obj, 'supplier_matched'):
-                return rel_obj.supplier_matched
-
-        return None
-
-    get_inboundaddress_supplier_matched.short_description = '运作功能块地址 & 最终地址梳理/供应商 (匹配DUNS)'
+    get_inboundaddress_property.short_description = '国产/进口/自制'
 
     def get_inboundaddress_region_division(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 区域划分 """
@@ -335,7 +321,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_region_division.short_description = '运作功能块地址 & 最终地址梳理/区域划分'
+    get_inboundaddress_region_division.short_description = '区域划分'
 
     def get_inboundaddress_country(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 国家 """
@@ -349,7 +335,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_country.short_description = '运作功能块地址 & 最终地址梳理/国家'
+    get_inboundaddress_country.short_description = '国家'
 
     def get_inboundaddress_province(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 省 """
@@ -363,7 +349,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_province.short_description = '运作功能块地址 & 最终地址梳理/省'
+    get_inboundaddress_province.short_description = '省'
 
     def get_inboundaddress_city(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 市 """
@@ -377,7 +363,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_city.short_description = '运作功能块地址 & 最终地址梳理/市'
+    get_inboundaddress_city.short_description = '市'
 
     def get_inboundaddress_mfg_location(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 生产地址 """
@@ -391,21 +377,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_mfg_location.short_description = '运作功能块地址 & 最终地址梳理/生产地址'
-
-    def get_inboundaddress_supplier_distance_matched(self, obj):
-        """ 运作功能块地址 & 最终地址梳理, SGM PLANT """
-        _ = self
-
-        if hasattr(obj, 'rel_address'):
-            rel_obj = obj.rel_address
-
-            if hasattr(rel_obj, 'supplier_distance_matched'):
-                return rel_obj.supplier_distance_matched
-
-        return None
-
-    get_inboundaddress_supplier_distance_matched.short_description = '运作功能块地址 & 最终地址梳理/SGM PLANT'
+    get_inboundaddress_mfg_location.short_description = '生产地址'
 
     def get_inboundaddress_distance_to_sgm_plant(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 运输距离-至生产厂区 """
@@ -419,7 +391,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_distance_to_sgm_plant.short_description = '运作功能块地址 & 最终地址梳理/运输距离-至生产厂区'
+    get_inboundaddress_distance_to_sgm_plant.short_description = '运输距离-至生产厂区'
 
     def get_inboundaddress_distance_to_shanghai_cc(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 运输距离-金桥C类 """
@@ -433,7 +405,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_distance_to_shanghai_cc.short_description = '运作功能块地址 & 最终地址梳理/运输距离-金桥C类'
+    get_inboundaddress_distance_to_shanghai_cc.short_description = '运输距离-金桥C类'
 
     def get_inboundaddress_warehouse_address(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 中转库地址 """
@@ -447,7 +419,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_warehouse_address.short_description = '运作功能块地址 & 最终地址梳理/中转库地址'
+    get_inboundaddress_warehouse_address.short_description = '中转库地址'
 
     def get_inboundaddress_warehouse_to_sgm_plant(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 中转库运输距离 """
@@ -461,7 +433,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_warehouse_to_sgm_plant.short_description = '运作功能块地址 & 最终地址梳理/中转库运输距离'
+    get_inboundaddress_warehouse_to_sgm_plant.short_description = '中转库运输距离'
 
     def get_inboundbuyer_buyer(self, obj):
         """ 采购 信息, 采购员 """
@@ -475,7 +447,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundbuyer_buyer.short_description = '采购 信息/采购员'
+    get_inboundbuyer_buyer.short_description = '采购信息/采购员'
 
     def get_inboundbuyer_contract_incoterm(self, obj):
         """ 采购 信息, 合同条款 """
@@ -489,7 +461,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundbuyer_contract_incoterm.short_description = '采购 信息/合同条款'
+    get_inboundbuyer_contract_incoterm.short_description = '采购信息/合同条款'
 
     def get_inboundbuyer_contract_supplier_transportation_cost(self, obj):
         """ 采购 信息, 供应商运费 """
@@ -503,7 +475,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundbuyer_contract_supplier_transportation_cost.short_description = '采购 信息/供应商运费'
+    get_inboundbuyer_contract_supplier_transportation_cost.short_description = '采购信息/供应商运费'
 
     def get_inboundbuyer_contract_supplier_pkg_cost(self, obj):
         """ 采购 信息, 供应商外包装费 """
@@ -517,7 +489,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundbuyer_contract_supplier_pkg_cost.short_description = '采购 信息/供应商外包装费'
+    get_inboundbuyer_contract_supplier_pkg_cost.short_description = '采购信息/供应商外包装费'
 
     def get_inboundbuyer_contract_supplier_seq_cost(self, obj):
         """ 采购 信息, 供应商排序费 """
@@ -531,7 +503,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundbuyer_contract_supplier_seq_cost.short_description = '采购 信息/供应商排序费'
+    get_inboundbuyer_contract_supplier_seq_cost.short_description = '采购信息/供应商排序费'
 
     def get_inboundheaderpart_head_part_number(self, obj):
         """ 头零件 信息, 头零件 """
@@ -545,7 +517,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundheaderpart_head_part_number.short_description = '头零件 信息/头零件'
+    get_inboundheaderpart_head_part_number.short_description = '头零件'
 
     def get_inboundheaderpart_assembly_supplier(self, obj):
         """ 头零件 信息, 总成供应商 """
@@ -559,7 +531,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundheaderpart_assembly_supplier.short_description = '头零件 信息/总成供应商'
+    get_inboundheaderpart_assembly_supplier.short_description = '总成供应商'
 
     def get_inboundheaderpart_color(self, obj):
         """ 头零件 信息, 颜色件 """
@@ -573,7 +545,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundheaderpart_color.short_description = '头零件 信息/颜色件'
+    get_inboundheaderpart_color.short_description = '颜色件'
 
     def get_inboundmode_logistics_incoterm_mode(self, obj):
         """ 最终模式梳理 信息, 运输条款 """
@@ -587,7 +559,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundmode_logistics_incoterm_mode.short_description = '最终模式梳理 信息/运输条款'
+    get_inboundmode_logistics_incoterm_mode.short_description = '最终模式/运输条款'
 
     def get_inboundmode_operation_mode(self, obj):
         """ 最终模式梳理 信息, 入厂物流模式 """
@@ -601,7 +573,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundmode_operation_mode.short_description = '最终模式梳理 信息/入厂物流模式'
+    get_inboundmode_operation_mode.short_description = '最终模式/入厂物流模式'
 
     def get_inboundoperationalmode_ckd_logistics_mode(self, obj):
         """ 运作功能块模式 信息, 海运FCL/海运LCL/空运 """
@@ -615,7 +587,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalmode_ckd_logistics_mode.short_description = '运作功能块模式 信息/海运FCL/海运LCL/空运'
+    get_inboundoperationalmode_ckd_logistics_mode.short_description = '运作功能块模式/海运FCL/海运LCL/空运'
 
     def get_inboundoperationalmode_planned_logistics_mode(self, obj):
         """ 运作功能块模式 信息, 规划模式（A/B/C/自制/进口） """
@@ -629,7 +601,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalmode_planned_logistics_mode.short_description = '运作功能块模式 信息/规划模式（A/B/C/自制/进口）'
+    get_inboundoperationalmode_planned_logistics_mode.short_description = '运作功能块模式/规划模式（A/B/C/自制/进口）'
 
     def get_inboundoperationalmode_if_supplier_seq(self, obj):
         """ 运作功能块模式 信息, 是否供应商排序(JIT) """
@@ -643,7 +615,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalmode_if_supplier_seq.short_description = '运作功能块模式 信息/是否供应商排序(JIT)'
+    get_inboundoperationalmode_if_supplier_seq.short_description = '运作功能块模式/是否供应商排序(JIT)'
 
     def get_inboundoperationalmode_payment_mode(self, obj):
         """ 运作功能块模式 信息, 结费模式（2A/2B）以此为准 """
@@ -657,7 +629,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalmode_payment_mode.short_description = '运作功能块模式 信息/结费模式（2A/2B）以此为准'
+    get_inboundoperationalmode_payment_mode.short_description = '运作功能块模式/结费模式（2A/2B）以此为准'
 
     def get_inboundoperationalpackage_supplier_pkg_name(self, obj):
         """ 运作功能块包装 信息, 供应商包装PK Name """
@@ -671,7 +643,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_name.short_description = '运作功能块包装 信息/供应商包装PK Name'
+    get_inboundoperationalpackage_supplier_pkg_name.short_description = '运作功能块包装/供应商包装PK Name'
 
     def get_inboundoperationalpackage_supplier_pkg_pcs(self, obj):
         """ 运作功能块包装 信息, 供应商包装PKPCS """
@@ -685,7 +657,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_pcs.short_description = '运作功能块包装 信息/供应商包装PKPCS'
+    get_inboundoperationalpackage_supplier_pkg_pcs.short_description = '运作功能块包装/供应商包装PKPCS'
 
     def get_inboundoperationalpackage_supplier_pkg_length(self, obj):
         """ 运作功能块包装 信息, 供应商包装PL """
@@ -699,7 +671,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_length.short_description = '运作功能块包装 信息/供应商包装PL'
+    get_inboundoperationalpackage_supplier_pkg_length.short_description = '运作功能块包装/供应商包装PL'
 
     def get_inboundoperationalpackage_supplier_pkg_width(self, obj):
         """ 运作功能块包装 信息, 供应商包装PW """
@@ -713,7 +685,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_width.short_description = '运作功能块包装 信息/供应商包装PW'
+    get_inboundoperationalpackage_supplier_pkg_width.short_description = '运作功能块包装/供应商包装PW'
 
     def get_inboundoperationalpackage_supplier_pkg_height(self, obj):
         """ 运作功能块包装 信息, 供应商包装PH """
@@ -727,7 +699,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_height.short_description = '运作功能块包装 信息/供应商包装PH'
+    get_inboundoperationalpackage_supplier_pkg_height.short_description = '运作功能块包装/供应商包装PH'
 
     def get_inboundoperationalpackage_supplier_pkg_folding_rate(self, obj):
         """ 运作功能块包装 信息, 供应商包装折叠率 """
@@ -741,7 +713,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_supplier_pkg_folding_rate.short_description = '运作功能块包装 信息/供应商包装折叠率'
+    get_inboundoperationalpackage_supplier_pkg_folding_rate.short_description = '运作功能块包装/供应商包装折叠率'
 
     def get_inboundoperationalpackage_sgm_pkg_name(self, obj):
         """ 运作功能块包装 信息, SGM包装PK Name """
@@ -755,7 +727,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_name.short_description = '运作功能块包装 信息/SGM包装PK Name'
+    get_inboundoperationalpackage_sgm_pkg_name.short_description = '运作功能块包装/SGM包装PK Name'
 
     def get_inboundoperationalpackage_sgm_pkg_pcs(self, obj):
         """ 运作功能块包装 信息, SGM包装PKPCS """
@@ -769,7 +741,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_pcs.short_description = '运作功能块包装 信息/SGM包装PKPCS'
+    get_inboundoperationalpackage_sgm_pkg_pcs.short_description = '运作功能块包装/SGM包装PKPCS'
 
     def get_inboundoperationalpackage_sgm_pkg_length(self, obj):
         """ 运作功能块包装 信息, SGM包装PL """
@@ -783,7 +755,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_length.short_description = '运作功能块包装 信息/SGM包装PL'
+    get_inboundoperationalpackage_sgm_pkg_length.short_description = '运作功能块包装/SGM包装PL'
 
     def get_inboundoperationalpackage_sgm_pkg_width(self, obj):
         """ 运作功能块包装 信息, SGM包装PW """
@@ -797,7 +769,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_width.short_description = '运作功能块包装 信息/SGM包装PW'
+    get_inboundoperationalpackage_sgm_pkg_width.short_description = '运作功能块包装/SGM包装PW'
 
     def get_inboundoperationalpackage_sgm_pkg_height(self, obj):
         """ 运作功能块包装 信息, SGM包装PH """
@@ -811,7 +783,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_height.short_description = '运作功能块包装 信息/SGM包装PH'
+    get_inboundoperationalpackage_sgm_pkg_height.short_description = '运作功能块包装/SGM包装PH'
 
     def get_inboundoperationalpackage_sgm_pkg_folding_rate(self, obj):
         """ 运作功能块包装 信息, SGM包装折叠率 """
@@ -825,7 +797,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundoperationalpackage_sgm_pkg_folding_rate.short_description = '运作功能块包装 信息/SGM包装折叠率'
+    get_inboundoperationalpackage_sgm_pkg_folding_rate.short_description = '运作功能块包装/SGM包装折叠率'
 
     def get_inboundpackage_supplier_pkg_name(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装PK Name """
@@ -839,7 +811,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_name.short_description = '最终包装信息梳理 信息/供应商包装PK Name'
+    get_inboundpackage_supplier_pkg_name.short_description = '最终包装信息/供应商包装PK Name'
 
     def get_inboundpackage_supplier_pkg_pcs(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装PKPCS """
@@ -853,7 +825,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_pcs.short_description = '最终包装信息梳理 信息/供应商包装PKPCS'
+    get_inboundpackage_supplier_pkg_pcs.short_description = '最终包装信息/供应商包装PKPCS'
 
     def get_inboundpackage_supplier_pkg_length(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装PL """
@@ -867,7 +839,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_length.short_description = '最终包装信息梳理 信息/供应商包装PL'
+    get_inboundpackage_supplier_pkg_length.short_description = '最终包装信息/供应商包装PL'
 
     def get_inboundpackage_supplier_pkg_width(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装PW """
@@ -881,7 +853,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_width.short_description = '最终包装信息梳理 信息/供应商包装PW'
+    get_inboundpackage_supplier_pkg_width.short_description = '最终包装信息/供应商包装PW'
 
     def get_inboundpackage_supplier_pkg_height(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装PH """
@@ -895,7 +867,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_height.short_description = '最终包装信息梳理 信息/供应商包装PH'
+    get_inboundpackage_supplier_pkg_height.short_description = '最终包装信息/供应商包装PH'
 
     def get_inboundpackage_supplier_pkg_folding_rate(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装折叠率 """
@@ -909,7 +881,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_folding_rate.short_description = '最终包装信息梳理 信息/供应商包装折叠率'
+    get_inboundpackage_supplier_pkg_folding_rate.short_description = '最终包装信息/供应商包装折叠率'
 
     def get_inboundpackage_supplier_pkg_cubic_pcs(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装Cubic/Pcs """
@@ -923,7 +895,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_cubic_pcs.short_description = '最终包装信息梳理 信息/供应商包装Cubic/Pcs'
+    get_inboundpackage_supplier_pkg_cubic_pcs.short_description = '最终包装信息/供应商包装Cubic/Pcs'
 
     def get_inboundpackage_supplier_pkg_cubic_veh(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装Cubic/Veh """
@@ -937,7 +909,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_supplier_pkg_cubic_veh.short_description = '最终包装信息梳理 信息/供应商包装Cubic/Veh'
+    get_inboundpackage_supplier_pkg_cubic_veh.short_description = '最终包装信息/供应商包装Cubic/Veh'
 
     def get_inboundpackage_sgm_pkg_name(self, obj):
         """ 最终包装信息梳理 信息, SGM包装PK Name """
@@ -951,7 +923,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_name.short_description = '最终包装信息梳理 信息/SGM包装PK Name'
+    get_inboundpackage_sgm_pkg_name.short_description = '最终包装信息/SGM包装PK Name'
 
     def get_inboundpackage_sgm_pkg_pcs(self, obj):
         """ 最终包装信息梳理 信息, SGM包装PKPCS """
@@ -965,7 +937,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_pcs.short_description = '最终包装信息梳理 信息/SGM包装PKPCS'
+    get_inboundpackage_sgm_pkg_pcs.short_description = '最终包装信息/SGM包装PKPCS'
 
     def get_inboundpackage_sgm_pkg_length(self, obj):
         """ 最终包装信息梳理 信息, SGM包装PL """
@@ -979,7 +951,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_length.short_description = '最终包装信息梳理 信息/SGM包装PL'
+    get_inboundpackage_sgm_pkg_length.short_description = '最终包装信息/SGM包装PL'
 
     def get_inboundpackage_sgm_pkg_width(self, obj):
         """ 最终包装信息梳理 信息, SGM包装PW """
@@ -993,7 +965,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_width.short_description = '最终包装信息梳理 信息/SGM包装PW'
+    get_inboundpackage_sgm_pkg_width.short_description = '最终包装信息/SGM包装PW'
 
     def get_inboundpackage_sgm_pkg_height(self, obj):
         """ 最终包装信息梳理 信息, SGM包装PH """
@@ -1007,7 +979,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_height.short_description = '最终包装信息梳理 信息/SGM包装PH'
+    get_inboundpackage_sgm_pkg_height.short_description = '最终包装信息/SGM包装PH'
 
     def get_inboundpackage_sgm_pkg_folding_rate(self, obj):
         """ 最终包装信息梳理 信息, SGM包装折叠率 """
@@ -1021,7 +993,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_folding_rate.short_description = '最终包装信息梳理 信息/SGM包装折叠率'
+    get_inboundpackage_sgm_pkg_folding_rate.short_description = '最终包装信息/SGM包装折叠率'
 
     def get_inboundpackage_sgm_pkg_cubic_pcs(self, obj):
         """ 最终包装信息梳理 信息, SGM包装Cubic/Pcs """
@@ -1035,7 +1007,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_cubic_pcs.short_description = '最终包装信息梳理 信息/SGM包装Cubic/Pcs'
+    get_inboundpackage_sgm_pkg_cubic_pcs.short_description = '最终包装信息/SGM包装Cubic/Pcs'
 
     def get_inboundpackage_sgm_pkg_cubic_veh(self, obj):
         """ 最终包装信息梳理 信息, SGM包装Cubic/Veh """
@@ -1049,7 +1021,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_sgm_pkg_cubic_veh.short_description = '最终包装信息梳理 信息/SGM包装Cubic/Veh'
+    get_inboundpackage_sgm_pkg_cubic_veh.short_description = '最终包装信息/SGM包装Cubic/Veh'
 
     def get_inboundpackage_cubic_matrix(self, obj):
         """ 最终包装信息梳理 信息, 体积放大系数 """
@@ -1063,7 +1035,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundpackage_cubic_matrix.short_description = '最终包装信息梳理 信息/体积放大系数'
+    get_inboundpackage_cubic_matrix.short_description = '最终包装信息/体积放大系数'
 
     def get_inboundtcs_bidder_list_number(self, obj):
         """ TCS 物流跟踪 信息, Bidder号 """
@@ -1077,7 +1049,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_bidder_list_number.short_description = 'TCS 物流跟踪 信息/Bidder号'
+    get_inboundtcs_bidder_list_number.short_description = 'TCS 物流跟踪/Bidder号'
 
     def get_inboundtcs_program(self, obj):
         """ TCS 物流跟踪 信息, 定点项目 """
@@ -1091,7 +1063,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_program.short_description = 'TCS 物流跟踪 信息/定点项目'
+    get_inboundtcs_program.short_description = 'TCS 物流跟踪/定点项目'
 
     def get_inboundtcs_supplier_ship_from_address(self, obj):
         """ TCS 物流跟踪 信息, 供应商发货地址 """
@@ -1105,7 +1077,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_supplier_ship_from_address.short_description = 'TCS 物流跟踪 信息/供应商发货地址'
+    get_inboundtcs_supplier_ship_from_address.short_description = 'TCS 物流跟踪/供应商发货地址'
 
     def get_inboundtcs_process(self, obj):
         """ TCS 物流跟踪 信息, 报价条款 """
@@ -1119,7 +1091,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_process.short_description = 'TCS 物流跟踪 信息/报价条款'
+    get_inboundtcs_process.short_description = 'TCS 物流跟踪/报价条款'
 
     def get_inboundtcs_suggest_delivery_method(self, obj):
         """ TCS 物流跟踪 信息, 运输模式 """
@@ -1133,7 +1105,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_suggest_delivery_method.short_description = 'TCS 物流跟踪 信息/运输模式'
+    get_inboundtcs_suggest_delivery_method.short_description = 'TCS 物流跟踪/运输模式'
 
     def get_inboundtcs_sgm_transport_duty(self, obj):
         """ TCS 物流跟踪 信息, SGM运输责任 """
@@ -1147,7 +1119,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_sgm_transport_duty.short_description = 'TCS 物流跟踪 信息/SGM运输责任'
+    get_inboundtcs_sgm_transport_duty.short_description = 'TCS 物流跟踪/SGM运输责任'
 
     def get_inboundtcs_supplier_transport_duty(self, obj):
         """ TCS 物流跟踪 信息, 供应商运输责任 """
@@ -1161,7 +1133,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_supplier_transport_duty.short_description = 'TCS 物流跟踪 信息/供应商运输责任'
+    get_inboundtcs_supplier_transport_duty.short_description = 'TCS 物流跟踪/供应商运输责任'
 
     def get_inboundtcs_sgm_returnable_duty(self, obj):
         """ TCS 物流跟踪 信息, SGM外包装责任 """
@@ -1175,7 +1147,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_sgm_returnable_duty.short_description = 'TCS 物流跟踪 信息/SGM外包装责任'
+    get_inboundtcs_sgm_returnable_duty.short_description = 'TCS 物流跟踪/SGM外包装责任'
 
     def get_inboundtcs_supplier_returnable_duty(self, obj):
         """ TCS 物流跟踪 信息, 供应商外包装责任 """
@@ -1189,7 +1161,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_supplier_returnable_duty.short_description = 'TCS 物流跟踪 信息/供应商外包装责任'
+    get_inboundtcs_supplier_returnable_duty.short_description = 'TCS 物流跟踪/供应商外包装责任'
 
     def get_inboundtcs_consignment_mode(self, obj):
         """ TCS 物流跟踪 信息, 外协加工业务模式 """
@@ -1203,7 +1175,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_consignment_mode.short_description = 'TCS 物流跟踪 信息/外协加工业务模式'
+    get_inboundtcs_consignment_mode.short_description = 'TCS 物流跟踪/外协加工业务模式'
 
     def get_inboundtcs_comments(self, obj):
         """ TCS 物流跟踪 信息, 备注 """
@@ -1217,7 +1189,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcs_comments.short_description = 'TCS 物流跟踪 信息/备注'
+    get_inboundtcs_comments.short_description = 'TCS 物流跟踪/备注'
 
     def get_inboundtcspackage_supplier_pkg_name(self, obj):
         """ TCS包装 信息, 供应商出厂包装PK Name """
@@ -1231,7 +1203,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_name.short_description = 'TCS包装 信息/供应商出厂包装PK Name'
+    get_inboundtcspackage_supplier_pkg_name.short_description = 'TCS包装/供应商出厂包装PK Name'
 
     def get_inboundtcspackage_supplier_pkg_pcs(self, obj):
         """ TCS包装 信息, 供应商出厂包装PKPCS """
@@ -1245,7 +1217,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_pcs.short_description = 'TCS包装 信息/供应商出厂包装PKPCS'
+    get_inboundtcspackage_supplier_pkg_pcs.short_description = 'TCS包装/供应商出厂包装PKPCS'
 
     def get_inboundtcspackage_supplier_pkg_length(self, obj):
         """ TCS包装 信息, 供应商出厂包装PL """
@@ -1259,7 +1231,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_length.short_description = 'TCS包装 信息/供应商出厂包装PL'
+    get_inboundtcspackage_supplier_pkg_length.short_description = 'TCS包装/供应商出厂包装PL'
 
     def get_inboundtcspackage_supplier_pkg_width(self, obj):
         """ TCS包装 信息, 供应商出厂包装PW """
@@ -1273,7 +1245,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_width.short_description = 'TCS包装 信息/供应商出厂包装PW'
+    get_inboundtcspackage_supplier_pkg_width.short_description = 'TCS包装/供应商出厂包装PW'
 
     def get_inboundtcspackage_supplier_pkg_height(self, obj):
         """ TCS包装 信息, 供应商出厂包装PH """
@@ -1287,7 +1259,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_height.short_description = 'TCS包装 信息/供应商出厂包装PH'
+    get_inboundtcspackage_supplier_pkg_height.short_description = 'TCS包装/供应商出厂包装PH'
 
     def get_inboundtcspackage_supplier_pkg_folding_rate(self, obj):
         """ TCS包装 信息, 供应商出厂包装折叠率 """
@@ -1301,7 +1273,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_folding_rate.short_description = 'TCS包装 信息/供应商出厂包装折叠率'
+    get_inboundtcspackage_supplier_pkg_folding_rate.short_description = 'TCS包装/供应商出厂包装折叠率'
 
     def get_inboundtcspackage_supplier_pkg_cubic_pcs(self, obj):
         """ TCS包装 信息, 供应商出厂包装Cubic/Pcs """
@@ -1315,7 +1287,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_cubic_pcs.short_description = 'TCS包装 信息/供应商出厂包装Cubic/Pcs'
+    get_inboundtcspackage_supplier_pkg_cubic_pcs.short_description = 'TCS包装/供应商出厂包装Cubic/Pcs'
 
     def get_inboundtcspackage_supplier_pkg_cubic_veh(self, obj):
         """ TCS包装 信息, 供应商出厂包装Cubic/Veh """
@@ -1329,7 +1301,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_supplier_pkg_cubic_veh.short_description = 'TCS包装 信息/供应商出厂包装Cubic/Veh'
+    get_inboundtcspackage_supplier_pkg_cubic_veh.short_description = 'TCS包装/供应商出厂包装Cubic/Veh'
 
     def get_inboundtcspackage_sgm_pkg_name(self, obj):
         """ TCS包装 信息, 先期规划包装PK Name """
@@ -1343,7 +1315,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_name.short_description = 'TCS包装 信息/先期规划包装PK Name'
+    get_inboundtcspackage_sgm_pkg_name.short_description = 'TCS包装/先期规划包装PK Name'
 
     def get_inboundtcspackage_sgm_pkg_pcs(self, obj):
         """ TCS包装 信息, 先期规划包装PKPCS """
@@ -1357,7 +1329,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_pcs.short_description = 'TCS包装 信息/先期规划包装PKPCS'
+    get_inboundtcspackage_sgm_pkg_pcs.short_description = 'TCS包装/先期规划包装PKPCS'
 
     def get_inboundtcspackage_sgm_pkg_length(self, obj):
         """ TCS包装 信息, 先期规划包装PL """
@@ -1371,7 +1343,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_length.short_description = 'TCS包装 信息/先期规划包装PL'
+    get_inboundtcspackage_sgm_pkg_length.short_description = 'TCS包装/先期规划包装PL'
 
     def get_inboundtcspackage_sgm_pkg_width(self, obj):
         """ TCS包装 信息, 先期规划包装PW """
@@ -1385,7 +1357,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_width.short_description = 'TCS包装 信息/先期规划包装PW'
+    get_inboundtcspackage_sgm_pkg_width.short_description = 'TCS包装/先期规划包装PW'
 
     def get_inboundtcspackage_sgm_pkg_height(self, obj):
         """ TCS包装 信息, 先期规划包装PH """
@@ -1399,7 +1371,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_height.short_description = 'TCS包装 信息/先期规划包装PH'
+    get_inboundtcspackage_sgm_pkg_height.short_description = 'TCS包装/先期规划包装PH'
 
     def get_inboundtcspackage_sgm_pkg_folding_rate(self, obj):
         """ TCS包装 信息, 先期规划包装折叠率 """
@@ -1413,7 +1385,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundtcspackage_sgm_pkg_folding_rate.short_description = 'TCS包装 信息/先期规划包装折叠率'
+    get_inboundtcspackage_sgm_pkg_folding_rate.short_description = 'TCS包装/先期规划包装折叠率'
 
 
 @admin.register(models.AEbomEntry)
