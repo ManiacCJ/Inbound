@@ -151,6 +151,11 @@ class InboundAddressInline(admin.StackedInline):
     extra = 0
 
 
+class InboundTCSPackageInline(admin.StackedInline):
+    model = models.InboundTCSPackage
+    extra = 0
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -182,7 +187,8 @@ class EbomAdmin(admin.ModelAdmin):
     )
 
     inlines = [
-        EbomConfigurationInline, InboundTCSInline, InboundBuyerInline, InboundAddressInline
+        EbomConfigurationInline, InboundTCSInline, InboundBuyerInline, InboundAddressInline,
+        InboundTCSPackageInline
     ]
 
 
@@ -295,6 +301,13 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                                     address_object.supplier_matched = supplier_queryset.first()
 
                             address_object.save()
+
+                        # tcs package object
+                        if not hasattr(ebom_object, 'rel_tcs_package'):
+                            tcs_pkg_object = models.InboundTCSPackage(
+                                bom=ebom_object
+                            )
+                            tcs_pkg_object.save()
 
                     # update entry object
                     entry_object.whether_loaded = True

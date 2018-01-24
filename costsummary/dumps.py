@@ -303,6 +303,18 @@ class ParseArray:
              'in_header': 'supplier_returnable_duty', 'match_display': True},
             {'r_offset': -1, 'ex_header': '外协加工业务模式\nConsignment Mode', 'in_header': 'consignment_mode',
              'match_display': True},
+
+            {'r_offset': 0, 'ex_header': 'Container Name', 'in_header': 'supplier_pkg_name'},
+            {'r_offset': 0, 'ex_header': 'Quantity', 'in_header': 'supplier_pkg_pcs'},
+            {'r_offset': 0, 'ex_header': 'Length', 'in_header': 'supplier_pkg_length'},
+            {'r_offset': 0, 'ex_header': 'Height', 'in_header': 'supplier_pkg_height'},
+            {'r_offset': 0, 'ex_header': 'Width', 'in_header': 'supplier_pkg_width'},
+
+            {'r_offset': 0, 'ex_header': 'GM_PKG_CONTAINER_NAME', 'in_header': 'sgm_pkg_name'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_QTY', 'in_header': 'sgm_pkg_pcs'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_LENGTH', 'in_header': 'sgm_pkg_length'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_WIDTH', 'in_header': 'sgm_pkg_width'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_HEIGHT', 'in_header': 'sgm_pkg_height'},
         ]
 
         for i in range(len(TCS_HEADER)):
@@ -365,7 +377,7 @@ class ParseArray:
                 for tcs_object in tcs_objects:
                     params = dict()
 
-                    for dict_obj in TCS_HEADER[1:]:
+                    for dict_obj in TCS_HEADER[1: -10]:
                         if 'match_display' in dict_obj:
                             choice = getattr(tcs_object, dict_obj['in_header'] + '_choice')
 
@@ -383,6 +395,36 @@ class ParseArray:
                         setattr(tcs_object, attribute, params[attribute])
 
                     tcs_object.save()
+
+            try:
+                tcs_package_objects = models.InboundTCSPackage.objects.filter(bom__part_number=int(lookup_value))
+
+            except ValueError as e:
+                print(e)
+                pass
+
+            else:
+                for tcs_package_object in tcs_package_objects:
+                    params = dict()
+
+                    for dict_obj in TCS_HEADER[-10:]:
+                        if 'match_display' in dict_obj:
+                            choice = getattr(tcs_package_object, dict_obj['in_header'] + '_choice')
+
+                            for int_val, str_val in choice:
+                                if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                    params[dict_obj['in_header']] = int_val
+                                    break
+
+                        else:
+                            params[dict_obj['in_header']] = row[dict_obj['col']]
+
+                    for attribute in params:
+                        if params[attribute] == '':
+                            params[attribute] = None
+                        setattr(tcs_package_object, attribute, params[attribute])
+
+                    tcs_package_object.save()
 
     @staticmethod
     def parse_buyer(matrix: list):

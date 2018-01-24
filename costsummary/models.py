@@ -1,3 +1,5 @@
+from datetime import timedelta, date
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -313,8 +315,8 @@ class InboundTCS(models.Model):
     comments = models.TextField(null=True, blank=True, verbose_name='备注')
 
     class Meta:
-        verbose_name = 'TCS定点 信息'
-        verbose_name_plural = 'TCS定点 信息'
+        verbose_name = 'TCS 物流跟踪 信息'
+        verbose_name_plural = 'TCS 物流跟踪 信息'
 
     def __str__(self):
         return '零件 %s' % str(self.bom)
@@ -430,6 +432,20 @@ class InboundTCSPackage(models.Model):
     def __str__(self):
         return '零件 %s' % str(self.bom)
 
+    def save(self, *args, **kwargs):
+        """ dependent fields """
+        if not self.supplier_pkg_cubic_pcs:
+            try:
+                self.supplier_pkg_cubic_pcs = (
+                        self.supplier_pkg_length * self.supplier_pkg_height * self.supplier_pkg_width
+                ) / self.supplier_pkg_pcs / 1e9
+
+            except (TypeError, ZeroDivisionError) as e:
+                print(e)
+                self.supplier_pkg_cubic_pcs = None
+
+        super().save(*args, **kwargs)
+
 
 class UploadHandler(models.Model):
     """ Upload files. """
@@ -448,3 +464,10 @@ class UploadHandler(models.Model):
 
     def __str__(self):
         return str(self.upload_time)
+
+    def save(self, *args, **kwargs):
+        """ auto archive. """
+        for old_object in UploadHandler.objects.filter(upload_time__lte=date.today() - timedelta(days=-1)):
+            old_object.delete()
+
+        super().save(*args, **kwargs)
