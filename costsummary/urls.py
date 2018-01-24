@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^initialize/tecnum$', views.initialize_data, {'data': 'tec-num'}),
     url(r'^initialize/nl$', views.initialize_data, {'data': 'nl'}),
     url(r'^initialize/supplier', views.initialize_data, {'data': 'supplier'}),
+    url(r'^dsl/foreign-fields', views.dsl_list_display_foreign_fields),
 
     url(r'^sheet/tcs$', views.download_sheet_template, {'sheet': 'tcs'}),
     url(r'^sheet/buyer$', views.download_sheet_template, {'sheet': 'buyer'}),

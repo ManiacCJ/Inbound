@@ -107,6 +107,9 @@ class Ebom(models.Model):
     upc = models.CharField(max_length=20, verbose_name='UPC')
     fna = models.CharField(max_length=20, verbose_name='FNA')
 
+    structure_node = models.CharField(max_length=64, null=True, blank=True,
+                                      default=None, verbose_name='Structure Node')
+
     part_number = models.CharField(max_length=32, verbose_name='P/N-Part Number')
     description_en = models.CharField(max_length=128, verbose_name='Description EN')
     description_cn = models.CharField(max_length=128, null=True, blank=True, verbose_name='Description CN')
@@ -576,6 +579,8 @@ class InboundPackage(models.Model):
     sgm_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='SGM包装折叠率')
     sgm_pkg_cubic_pcs = models.FloatField(null=True, blank=True, verbose_name='SGM包装Cubic/Pcs')
     sgm_pkg_cubic_veh = models.FloatField(null=True, blank=True, verbose_name='SGM包装Cubic/Veh')
+
+    cubic_matrix = models.FloatField(null=True, blank=True, verbose_name='体积放大系数')
 
     class Meta:
         verbose_name = '最终包装信息梳理 信息'
