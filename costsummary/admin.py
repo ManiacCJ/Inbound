@@ -323,9 +323,19 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         'upload_time'
     ]
 
-    readonly_fields = [
-        'download_tcs_template'
-    ]
+    def get_readonly_fields(self, request, obj=None):
+        """ Read-only fields according to request. """
+        print(request.GET)
+        model_name = request.GET.get('model_name')
+
+        if model_name == '1':
+            return ['download_tcs_template']
+
+        elif model_name == '2':
+            return ['download_buyer_template']
+
+        else:
+            return super().get_readonly_fields(request)
 
     def response_add(self, request, obj, post_url_continue=None):
         """ Redirect when add work completed. """
@@ -349,14 +359,16 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
     def download_tcs_template(self, obj):
         """ Download tcs template. """
-        _ = self
+        _, _ = self, obj
+        return '<a href="/costsummary/sheet/tcs">下载</a>'
 
-        if obj.model_name == 1:
-            return '<a href="/costsummary/sheet/tcs">下载</a>'
-        elif obj.model_name == 2:
-            return '<a href="/costsummary/sheet/buyer">下载</a>'
-        else:
-            return '<a href="#">下载</a>'
+    def download_buyer_template(self, obj):
+        """ Download buyer template. """
+        _, _ = self, obj
+        return '<a href="/costsummary/sheet/buyer">下载</a>'
 
     download_tcs_template.short_description = 'TCS 物流跟踪表模板'
+    download_buyer_template.short_description = 'TCS 采购定点表模板'
+
     download_tcs_template.allow_tags = True
+    download_buyer_template.allow_tags = True
