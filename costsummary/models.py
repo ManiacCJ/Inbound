@@ -344,6 +344,10 @@ class InboundAddress(models.Model):
     """ Inbound address. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_address')
 
+    # operational address
+    fu_address = models.CharField(max_length=128, null=True, blank=True, verbose_name='FU提供的原始地址信息')
+    mr_address = models.CharField(max_length=128, null=True, blank=True, verbose_name='MR取货地址')
+
     property_choice = ((1, '国产'), (2, '进口'), (3, '自制'))
     property = models.IntegerField(choices=property_choice, null=True, blank=True, verbose_name='国产/进口/自制')
 
@@ -364,8 +368,8 @@ class InboundAddress(models.Model):
     warehouse_to_sgm_plant = models.FloatField(null=True, blank=True, verbose_name='中转库运输距离')
 
     class Meta:
-        verbose_name = '最终地址梳理'
-        verbose_name_plural = '最终地址梳理'
+        verbose_name = '运作功能块地址 & 最终地址梳理'
+        verbose_name_plural = '运作功能块地址 & 最终地址梳理'
 
     def __str__(self):
         return '零件 %s' % str(self.bom)
@@ -411,9 +415,9 @@ class InboundTCSPackage(models.Model):
 
     supplier_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='供应商出厂包装PK Name')
     supplier_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PKPCS')
-    supplier_pkg_length = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PL')
-    supplier_pkg_width = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PW')
-    supplier_pkg_height = models.IntegerField(null=True, blank=True, verbose_name='供应商出厂包装PH')
+    supplier_pkg_length = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装PL')
+    supplier_pkg_width = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装PW')
+    supplier_pkg_height = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装PH')
     supplier_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装折叠率')
     supplier_pkg_cubic_pcs = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装Cubic/Pcs')
     supplier_pkg_cubic_veh = models.FloatField(null=True, blank=True, verbose_name='供应商出厂包装Cubic/Veh')
@@ -426,8 +430,8 @@ class InboundTCSPackage(models.Model):
     sgm_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='先期规划包装折叠率')
 
     class Meta:
-        verbose_name = 'TCS包装信息'
-        verbose_name_plural = 'TCS包装信息'
+        verbose_name = 'TCS包装 信息'
+        verbose_name_plural = 'TCS包装 信息'
 
     def __str__(self):
         return '零件 %s' % str(self.bom)
@@ -456,8 +460,8 @@ class InboundHeaderPart(models.Model):
     color = models.CharField(max_length=64, null=True, blank=True, verbose_name='颜色件')
 
     class Meta:
-        verbose_name = '头零件信息'
-        verbose_name_plural = '头零件信息'
+        verbose_name = '头零件 信息'
+        verbose_name_plural = '头零件 信息'
 
     def __str__(self):
         return '零件 %s' % str(self.bom)
@@ -475,6 +479,110 @@ class InboundHeaderPart(models.Model):
             self.assembly_supplier = ','.join(duns_supplier_list)
 
         super().save(*args, **kwargs)
+
+
+class InboundOperationalMode(models.Model):
+    """ Inbound operation model """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_op_mode')
+
+    ckd_logistics_mode = models.CharField(max_length=16, null=True, blank=True, verbose_name='海运FCL/海运LCL/空运')
+    planned_logistics_mode = models.CharField(max_length=16, null=True, blank=True,
+                                              verbose_name='规划模式（A/B/C/自制/进口）')
+    if_supplier_seq = models.CharField(max_length=16, null=True, blank=True, verbose_name='是否供应商排序(JIT)')
+    payment_mode = models.CharField(max_length=16, null=True, blank=True, verbose_name='结费模式（2A/2B）以此为准')
+
+    class Meta:
+        verbose_name = '运作功能块模式 信息'
+        verbose_name_plural = '运作功能块模式 信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
+
+class InboundMode(models.Model):
+    """ Final mode. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_mode')
+
+    logistics_incoterm_mode_choice = (
+        (1, 'FCA'), (2, 'FCA Warehouse'), (3, 'DDP'), (4, 'Inhouse')
+    )
+    logistics_incoterm_mode = models.IntegerField(
+        null=True, blank=True, verbose_name='运输条款', choices=logistics_incoterm_mode_choice)
+
+    operation_mode_choice = (
+        (1, 'MR A'),
+        (2, 'MR C'),
+        (3, 'B'),
+        (4, 'JIT'),
+        (5, '干线'),
+        (6, '进口'),
+        (7, '供应商自供自用'),
+    )
+    operation_mode = models.IntegerField(
+        null=True, blank=True, verbose_name='入厂物流模式', choices=operation_mode_choice)
+
+    class Meta:
+        verbose_name = '最终模式梳理 信息'
+        verbose_name_plural = '最终模式梳理 信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
+
+class InboundOperationalPackage(models.Model):
+    """ Inbound Operational package. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_op_package')
+
+    supplier_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='供应商包装PK Name')
+    supplier_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='供应商包装PKPCS')
+    supplier_pkg_length = models.FloatField(null=True, blank=True, verbose_name='供应商包装PL')
+    supplier_pkg_width = models.FloatField(null=True, blank=True, verbose_name='供应商包装PW')
+    supplier_pkg_height = models.FloatField(null=True, blank=True, verbose_name='供应商包装PH')
+    supplier_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='供应商包装折叠率')
+
+    sgm_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='SGM包装PK Name')
+    sgm_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='SGM包装PKPCS')
+    sgm_pkg_length = models.FloatField(null=True, blank=True, verbose_name='SGM包装PL')
+    sgm_pkg_width = models.FloatField(null=True, blank=True, verbose_name='SGM包装PW')
+    sgm_pkg_height = models.FloatField(null=True, blank=True, verbose_name='SGM包装PH')
+    sgm_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='SGM包装折叠率')
+
+    class Meta:
+        verbose_name = '运作功能块包装 信息'
+        verbose_name_plural = '运作功能块包装 信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
+
+class InboundPackage(models.Model):
+    """ Inbound Final package. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_package')
+
+    supplier_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='供应商包装PK Name')
+    supplier_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='供应商包装PKPCS')
+    supplier_pkg_length = models.FloatField(null=True, blank=True, verbose_name='供应商包装PL')
+    supplier_pkg_width = models.FloatField(null=True, blank=True, verbose_name='供应商包装PW')
+    supplier_pkg_height = models.FloatField(null=True, blank=True, verbose_name='供应商包装PH')
+    supplier_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='供应商包装折叠率')
+    supplier_pkg_cubic_pcs = models.FloatField(null=True, blank=True, verbose_name='供应商包装Cubic/Pcs')
+    supplier_pkg_cubic_veh = models.FloatField(null=True, blank=True, verbose_name='供应商包装Cubic/Veh')
+
+    sgm_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='SGM包装PK Name')
+    sgm_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='SGM包装PKPCS')
+    sgm_pkg_length = models.FloatField(null=True, blank=True, verbose_name='SGM包装PL')
+    sgm_pkg_width = models.FloatField(null=True, blank=True, verbose_name='SGM包装PW')
+    sgm_pkg_height = models.FloatField(null=True, blank=True, verbose_name='SGM包装PH')
+    sgm_pkg_folding_rate = models.FloatField(null=True, blank=True, verbose_name='SGM包装折叠率')
+    sgm_pkg_cubic_pcs = models.FloatField(null=True, blank=True, verbose_name='SGM包装Cubic/Pcs')
+    sgm_pkg_cubic_veh = models.FloatField(null=True, blank=True, verbose_name='SGM包装Cubic/Veh')
+
+    class Meta:
+        verbose_name = '最终包装信息梳理 信息'
+        verbose_name_plural = '最终包装信息梳理 信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
 
 
 class UploadHandler(models.Model):

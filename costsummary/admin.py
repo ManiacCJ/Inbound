@@ -161,6 +161,26 @@ class InboundHeaderPartInline(admin.StackedInline):
     extra = 0
 
 
+class InboundOperationalModeInline(admin.StackedInline):
+    model = models.InboundOperationalMode
+    extra = 0
+
+
+class InboundModeInline(admin.StackedInline):
+    model = models.InboundMode
+    extra = 0
+
+
+class InboundOperationalPackageInline(admin.StackedInline):
+    model = models.InboundOperationalPackage
+    extra = 0
+
+
+class InboundPackageInline(admin.StackedInline):
+    model = models.InboundPackage
+    extra = 0
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -193,11 +213,15 @@ class EbomAdmin(admin.ModelAdmin):
 
     inlines = [
         EbomConfigurationInline,
+        InboundHeaderPartInline,
         InboundTCSInline,
         InboundBuyerInline,
         InboundAddressInline,
         InboundTCSPackageInline,
-        InboundHeaderPartInline,
+        InboundOperationalModeInline,
+        InboundModeInline,
+        InboundOperationalPackageInline,
+        InboundPackageInline,
     ]
 
 
@@ -320,10 +344,38 @@ class AEbomEntryAdmin(admin.ModelAdmin):
 
                         # header part object
                         if not hasattr(ebom_object, 'rel_header'):
-                            tcs_header_object = models.InboundHeaderPart(
+                            header_object = models.InboundHeaderPart(
                                 bom=ebom_object
                             )
-                            tcs_header_object.save()
+                            header_object.save()
+
+                        # operational mode object
+                        if not hasattr(ebom_object, 'rel_op_mode'):
+                            op_mode_object = models.InboundOperationalMode(
+                                bom=ebom_object
+                            )
+                            op_mode_object.save()
+
+                        # mode object
+                        if not hasattr(ebom_object, 'rel_mode'):
+                            mode_object = models.InboundMode(
+                                bom=ebom_object
+                            )
+                            mode_object.save()
+
+                        # operational package object
+                        if not hasattr(ebom_object, 'rel_op_package'):
+                            op_pkg_object = models.InboundOperationalPackage(
+                                bom=ebom_object
+                            )
+                            op_pkg_object.save()
+
+                        # header part object
+                        if not hasattr(ebom_object, 'rel_package'):
+                            pkg_object = models.InboundPackage(
+                                bom=ebom_object
+                            )
+                            pkg_object.save()
 
                     # update entry object
                     entry_object.whether_loaded = True
