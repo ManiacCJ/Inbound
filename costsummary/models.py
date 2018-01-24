@@ -447,6 +447,36 @@ class InboundTCSPackage(models.Model):
         super().save(*args, **kwargs)
 
 
+class InboundHeaderPart(models.Model):
+    """ Inbound header part. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_header')
+
+    head_part_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='头零件')
+    assembly_supplier = models.CharField(max_length=128, null=True, blank=True, verbose_name='总成供应商')
+    color = models.CharField(max_length=64, null=True, blank=True, verbose_name='颜色件')
+
+    class Meta:
+        verbose_name = '头零件信息'
+        verbose_name_plural = '头零件信息'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
+
+    def save(self, *args, **kwargs):
+        """ match header part. """
+        self.head_part_number = self.bom.header_part_number
+
+        if not self.assembly_supplier:
+            duns_supplier_list = []
+            for ebom_object in Ebom.objects.filter(part_number=self.head_part_number):
+                if ebom_object.duns and ebom_object.supplier_name:
+                    duns_supplier_list.append(f'{ebom_object.duns} - {ebom_object.supplier_name}')
+
+            self.assembly_supplier = ','.join(duns_supplier_list)
+
+        super().save(*args, **kwargs)
+
+
 class UploadHandler(models.Model):
     """ Upload files. """
     model_name_choice = (

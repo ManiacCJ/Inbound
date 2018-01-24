@@ -156,6 +156,11 @@ class InboundTCSPackageInline(admin.StackedInline):
     extra = 0
 
 
+class InboundHeaderPartInline(admin.StackedInline):
+    model = models.InboundHeaderPart
+    extra = 0
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -187,8 +192,12 @@ class EbomAdmin(admin.ModelAdmin):
     )
 
     inlines = [
-        EbomConfigurationInline, InboundTCSInline, InboundBuyerInline, InboundAddressInline,
-        InboundTCSPackageInline
+        EbomConfigurationInline,
+        InboundTCSInline,
+        InboundBuyerInline,
+        InboundAddressInline,
+        InboundTCSPackageInline,
+        InboundHeaderPartInline,
     ]
 
 
@@ -308,6 +317,13 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                                 bom=ebom_object
                             )
                             tcs_pkg_object.save()
+
+                        # header part object
+                        if not hasattr(ebom_object, 'rel_header'):
+                            tcs_header_object = models.InboundHeaderPart(
+                                bom=ebom_object
+                            )
+                            tcs_header_object.save()
 
                     # update entry object
                     entry_object.whether_loaded = True
