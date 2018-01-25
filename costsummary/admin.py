@@ -321,7 +321,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_region_division.short_description = '区域划分'
+    get_inboundaddress_region_division.short_description = '最终地址梳理/区域划分'
 
     def get_inboundaddress_country(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 国家 """
@@ -335,7 +335,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_country.short_description = '国家'
+    get_inboundaddress_country.short_description = '最终地址梳理/国家'
 
     def get_inboundaddress_province(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 省 """
@@ -349,7 +349,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_province.short_description = '省'
+    get_inboundaddress_province.short_description = '最终地址梳理/省'
 
     def get_inboundaddress_city(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 市 """
@@ -363,7 +363,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_city.short_description = '市'
+    get_inboundaddress_city.short_description = '最终地址梳理/市'
 
     def get_inboundaddress_mfg_location(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 生产地址 """
@@ -377,7 +377,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundaddress_mfg_location.short_description = '生产地址'
+    get_inboundaddress_mfg_location.short_description = '最终地址梳理/生产地址'
 
     def get_inboundaddress_distance_to_sgm_plant(self, obj):
         """ 运作功能块地址 & 最终地址梳理, 运输距离-至生产厂区 """
@@ -531,7 +531,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundheaderpart_assembly_supplier.short_description = '总成供应商'
+    get_inboundheaderpart_assembly_supplier.short_description = '头零件信息/总成供应商'
 
     def get_inboundheaderpart_color(self, obj):
         """ 头零件 信息, 颜色件 """
@@ -545,7 +545,7 @@ class EbomAdmin(admin.ModelAdmin):
 
         return None
 
-    get_inboundheaderpart_color.short_description = '颜色件'
+    get_inboundheaderpart_color.short_description = '头零件信息/颜色件'
 
     def get_inboundmode_logistics_incoterm_mode(self, obj):
         """ 最终模式梳理 信息, 运输条款 """
