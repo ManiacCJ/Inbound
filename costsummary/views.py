@@ -6,6 +6,8 @@ from django.db import connection as RawConnection
 from django.shortcuts import Http404
 from django.contrib.admin import site as wide_table_dummy_param
 
+import django_excel
+
 from . import models
 from .dumps import InitializeData, PERSISTENCE_DIR
 from .admin import EbomAdmin as WideTable
@@ -137,26 +139,35 @@ get_{model_name}_{field_name}.short_description = '{model_verbose_name}/{field_v
 def download_wide_table(request, nl_mapping_id):
     """ Download wide table. """
     all_fields = WideTable.list_display
+    non_rel_fields = [e for e in all_fields if e not in ('label',)]
 
     # native fields are ones of Ebom class
     is_native = []
-    ebom_fields = [e.name for e in models.Ebom._meta.get_fields()]
+    header = []
+    ebom_fields = dict([
+        (e.name, e.verbose_name if hasattr(e, 'verbose_name') else e.name)
+        for e in models.Ebom._meta.get_fields()
+    ])
 
-    for field in all_fields:
+    for field in non_rel_fields:
         if not hasattr(WideTable, field):
             if field in ebom_fields:
                 is_native.append(True)
+                header.append(ebom_fields[field])
         else:
-            if field[0: 4] == 'get_' and callable(getattr(WideTable, field)):
-                is_native.append(False)
+            _method = getattr(WideTable, field)
 
-    assert len(all_fields) == len(is_native)
+            if field[0: 4] == 'get_' and callable(_method):
+                is_native.append(False)
+                header.append(_method.short_description)
+
+    assert len(non_rel_fields) == len(is_native)
 
     # initialize a wide table object
     wide_table_object = WideTable(models.Ebom, wide_table_dummy_param)
 
-    # get values
-    wide_table_matrix = []
+    # export two-dimensional array
+    wide_table_matrix = [header]
     ebom_objects = models.Ebom.objects.filter(label__id=nl_mapping_id)
 
     for ebom_object in ebom_objects:
@@ -164,7 +175,7 @@ def download_wide_table(request, nl_mapping_id):
         wide_table_row = []
         index = 0
 
-        for field in all_fields:
+        for field in non_rel_fields:
             if is_native[index]:
                 wide_table_row.append(getattr(ebom_object, field))
 
@@ -176,4 +187,7 @@ def download_wide_table(request, nl_mapping_id):
 
         wide_table_matrix.append(wide_table_row)
 
-    return HttpResponse(str(wide_table_matrix))
+    # download file name
+    label = models.NominalLabelMapping.objects.get(pk=nl_mapping_id)
+
+    return django_excel.make_response_from_array(wide_table_matrix, 'xls', file_name=str(label))
