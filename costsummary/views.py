@@ -139,7 +139,7 @@ get_{model_name}_{field_name}.short_description = '{model_verbose_name}/{field_v
 def download_wide_table(request, nl_mapping_id):
     """ Download wide table. """
     all_fields = WideTable.list_display
-    non_rel_fields = [e for e in all_fields if e not in ('label',)]
+    concerned_fields = [e for e in all_fields if e not in ('label',)]
 
     # native fields are ones of Ebom class
     is_native = []
@@ -149,7 +149,7 @@ def download_wide_table(request, nl_mapping_id):
         for e in models.Ebom._meta.get_fields()
     ])
 
-    for field in non_rel_fields:
+    for field in concerned_fields:
         if not hasattr(WideTable, field):
             if field in ebom_fields:
                 is_native.append(True)
@@ -161,7 +161,7 @@ def download_wide_table(request, nl_mapping_id):
                 is_native.append(False)
                 header.append(_method.short_description)
 
-    assert len(non_rel_fields) == len(is_native)
+    assert len(concerned_fields) == len(is_native)
 
     # initialize a wide table object
     wide_table_object = WideTable(models.Ebom, wide_table_dummy_param)
@@ -175,7 +175,7 @@ def download_wide_table(request, nl_mapping_id):
         wide_table_row = []
         index = 0
 
-        for field in non_rel_fields:
+        for field in concerned_fields:
             if is_native[index]:
                 wide_table_row.append(getattr(ebom_object, field))
 

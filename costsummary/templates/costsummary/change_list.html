@@ -85,7 +85,9 @@
             </a>
 
             <!-- download wide table -->
-            <a href="/costsummary/dl/wide" class="button">↓ 下载宽表</a>
+            {% if request.GET.label__id__exact %}
+                <a href="/costsummary/dl/wide/{{ request.GET.label__id__exact }}" class="button">↓ 下载宽表</a>
+            {% endif %}
 
             <!-- upload wide table -->
             <a href="#" class="button">↑ 上传宽表</a>
