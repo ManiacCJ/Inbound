@@ -93,7 +93,8 @@
             {% endif %}
 
             <!-- upload wide table -->
-            <a href="/costsummary/ul/wide" class="button">↑ 上传宽表</a>
+            <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=999" class="button">↑ 上传宽表</a>
+
         </div>
 
 

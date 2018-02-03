@@ -617,7 +617,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_mode
 
             if hasattr(rel_obj, 'logistics_incoterm_mode'):
-                return rel_obj.logistics_incoterm_mode
+                return rel_obj.get_logistics_incoterm_mode_display()
 
         return None
 
@@ -2123,6 +2123,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         elif model_name == '2':
             return ['download_buyer_template']
 
+        elif model_name == '999':
+            return ['download_wide_template']
+
         else:
             return super().get_readonly_fields(request)
 
@@ -2156,11 +2159,18 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         _, _ = self, obj
         return '<a href="/costsummary/sheet/buyer">下载</a>'
 
+    def download_wide_template(self, obj):
+        """ Download wide table template. """
+        _, _ = self, obj
+        return '<a href="/costsummary/sheet/wide">下载</a>'
+
     download_tcs_template.short_description = 'TCS 物流跟踪表模板'
     download_buyer_template.short_description = 'TCS 采购定点表模板'
+    download_wide_template.short_description = '宽表模板'
 
     download_tcs_template.allow_tags = True
     download_buyer_template.allow_tags = True
+    download_wide_template.allow_tags = True
 
 
 @admin.register(models.Constants)

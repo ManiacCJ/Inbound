@@ -70,6 +70,8 @@ def download_sheet_template(request, sheet):
         dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/tcs.xls')
     elif sheet == 'buyer':
         dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/buyer.xls')
+    elif sheet == 'wide':
+        dst_file = os.path.join(PERSISTENCE_DIR, 'sheets/wide.xls')
 
     if not dst_file:
         raise Http404('未知文件模板.')
@@ -213,7 +215,7 @@ def download_wide_table(request, nl_mapping_id):
 
 
 def upload_wide_table(request):
-    """ Upload &  wide table. """
+    """ Upload & parse wide table. """
 
     return HttpResponse('good')
 

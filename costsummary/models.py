@@ -595,6 +595,7 @@ class UploadHandler(models.Model):
     model_name_choice = (
         (1, InboundTCS._meta.verbose_name),
         (2, InboundBuyer._meta.verbose_name),
+        (999, '宽表'),
     )
     model_name = models.IntegerField(choices=model_name_choice)
 
