@@ -616,55 +616,104 @@ class UploadHandler(models.Model):
         super().save(*args, **kwargs)
 
 
+class Constants(models.Model):
+    constant_key = models.CharField(max_length=64, primary_key=True, verbose_name='constant name')
+
+    value_type_choice = ((0, 'int'), (1, 'char'), (2, 'decimal'))
+    value_type = models.IntegerField(verbose_name='值类型', choices=value_type_choice)
+    constant_value_int = models.IntegerField(null=True, blank=True, verbose_name='值(整数)')
+    constant_value_char = models.CharField(max_length=64, null=True, blank=True, verbose_name='值(字符)')
+    constant_value_float = models.FloatField(null=True, blank=True, verbose_name='值(小数)')
+
+    class Meta:
+        verbose_name = '常数维护'
+        verbose_name_plural = '常数维护'
+
+    def __str__(self):
+        return self.constant_key
+
+
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
 
     ddp_pcs = models.FloatField(null=True, blank=True, verbose_name='DDP运费/pcs')
+
     linehaul_oneway_pcs = models.FloatField(null=True, blank=True, verbose_name='干线去程/pcs')
     linehaul_vmi_pcs = models.FloatField(null=True, blank=True, verbose_name='干线VMI/pcs')
-    linehaul_backway_pcs = models.IntegerField(null=True, blank=True, verbose_name='干线返程/pcs')
+    linehaul_backway_pcs = models.FloatField(null=True, blank=True, verbose_name='干线返程/pcs')
 
     dom_truck_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='国内陆运/pcs')
-    dom_water_oneway_pcs = models.IntegerField(null=True, blank=True, verbose_name='国内水运-去程/pcs')
-    dom_cc_operation_pcs = models.IntegerField(null=True, blank=True, verbose_name='国内CC操作费/pcs')
-    dom_water_backway_pcs = models.IntegerField(null=True, blank=True, verbose_name='国内水运-返程/pcs')
+
+    dom_water_oneway_pcs = models.FloatField(null=True, blank=True, verbose_name='国内水运-去程/pcs')
+    dom_cc_operation_pcs = models.FloatField(null=True, blank=True, verbose_name='国内CC操作费/pcs')
+    dom_water_backway_pcs = models.FloatField(null=True, blank=True, verbose_name='国内水运-返程/pcs')
 
     dom_water_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='国内水运/pcs')
-    oversea_inland_pcs = models.FloatField(null=True, blank=True, verbose_name='海外段内陆运输/pcs')
-    oversea_cc_op_pcs = models.IntegerField(null=True, blank=True, verbose_name='海外CC操作费/pcs')
-    international_ocean_pcs = models.FloatField(null=True, blank=True, verbose_name='国际海运费/pcs')
 
+    oversea_inland_pcs = models.FloatField(null=True, blank=True, verbose_name='海外段内陆运输/pcs')
+    oversea_cc_op_pcs = models.FloatField(null=True, blank=True, verbose_name='海外CC操作费/pcs')
+    international_ocean_pcs = models.FloatField(null=True, blank=True, verbose_name='国际海运费/pcs')
     dom_pull_pcs = models.FloatField(null=True, blank=True, verbose_name='国内拉动费/pcs')
-    certificate_pcs = models.IntegerField(null=True, blank=True, verbose_name='单证费/pcs')
-    oversea_ocean_ttl_pcs = models.IntegerField(null=True, blank=True, verbose_name='进口海运/pcs')
+    certificate_pcs = models.FloatField(null=True, blank=True, verbose_name='单证费/pcs')
+
+    oversea_ocean_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='进口海运/pcs')
     oversea_air_pcs = models.FloatField(null=True, blank=True, verbose_name='进口空运/pcs')
     inbound_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='IB Cost')
 
     ddp_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 DDP运费/veh')
     linehaul_oneway_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 干线去程/veh')
     linehaul_vmi_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 干线VMI/veh')
-    linehaul_backway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 干线返程/veh')
+    linehaul_backway_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 干线返程/veh')
 
     dom_truck_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内陆运/veh')
-    dom_water_oneway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内海运-去程/veh')
-    dom_cc_operation_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内CC操作费/veh')
-    dom_water_backway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内海运-返程/veh')
+    dom_water_oneway_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内海运-去程/veh')
+    dom_cc_operation_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内CC操作费/veh')
+    dom_water_backway_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内海运-返程/veh')
 
     dom_water_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内海运/veh')
     oversea_inland_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 海外段内陆运输/veh')
-    oversea_cc_op_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 海外CC操作费/veh')
+    oversea_cc_op_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 海外CC操作费/veh')
     international_ocean_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国际海运费/veh')
     dom_pull_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内拉动费/veh')
-    certificate_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 单证费/veh')
+    certificate_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 单证费/veh')
 
-    oversea_ocean_ttl_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 进口海运/veh')
+    oversea_ocean_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 进口海运/veh')
     oversea_air_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 进口空运/veh')
     inbound_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 TTL IB Cost')
 
     class Meta:
-        verbose_name = '计算'
-        verbose_name_plural = '计算'
+        verbose_name = 'Cost Summary'
+        verbose_name_plural = 'Cost Summary'
 
     def __str__(self):
         return '零件 %s' % str(self.bom)
+
+    def calc_ddp_pcs(self):
+        """ Calculate ddp_pcs field. """
+        if hasattr(self.bom, 'rel_buyer'):
+            return self.bom.rel_buyer.contract_supplier_pkg_cost
+        else:
+            return None
+
+    # def calc_dom_truck_ttl_pcs(self):
+    #     """ Calculate dom_truck_ttl_pcs field. """
+
+    def save(self, *args, **kwargs):
+        """ Calculation when saving. """
+        for calculable_field in self._meta.get_fields():
+            if isinstance(calculable_field, models.FloatField):
+
+                # if manually set, skip calculation
+                if getattr(self, calculable_field.name) is None:
+                    if hasattr(self, 'calc_' + calculable_field.name):
+
+                        calc_func = getattr(self, 'calc_' + calculable_field.name)
+
+                        setattr(
+                            self,
+                            calculable_field.name,
+                            calc_func()
+                        )
+
+        super().save(*args, **kwargs)

@@ -3,6 +3,7 @@ import inspect
 
 from django.http import HttpResponse
 from django.db import connection as RawConnection
+from django.db.models import Model
 from django.shortcuts import Http404
 from django.contrib.admin import site as wide_table_dummy_param
 
@@ -190,7 +191,12 @@ def download_wide_table(request, nl_mapping_id):
 
         for field in concerned_fields:
             if is_native[index]:
-                wide_table_row.append(getattr(ebom_object, field))
+                field_or_fk = getattr(ebom_object, field)
+
+                if isinstance(field_or_fk, Model):
+                    wide_table_row.append(str(field_or_fk))
+                else:
+                    wide_table_row.append(field_or_fk)
 
             else:
                 method = getattr(wide_table_object, field)

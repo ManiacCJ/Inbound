@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.shortcuts import Http404
 from django.db import connection as RawConnection
+from django.db.models import Max
 
 # import django_excel
 
@@ -194,51 +195,50 @@ class EbomAdmin(admin.ModelAdmin):
     list_per_page = 8
 
     list_display = (
-        'part_number',
         'label',
         'upc',
         'fna',
         'structure_node',
+        'tec',
+        'part_number',
         'description_en',
         'description_cn',
         'header_part_number',
+        'get_quantity',
         'ar_em_material_indicator',
         'work_shop',
-        'duns',
+        # 'duns',
         'vendor_duns_number',
         'supplier_name',
+        'ewo_number',
         'model_and_option',
         'vpps',
+
+        'get_inboundheaderpart_head_part_number',
+        'get_inboundheaderpart_assembly_supplier', 'get_inboundheaderpart_color',
+
+        'get_inboundtcs_bidder_list_number',
+        'get_inboundtcs_program', 'get_inboundtcs_supplier_ship_from_address', 'get_inboundtcs_process',
+        'get_inboundtcs_suggest_delivery_method', 'get_inboundtcs_sgm_transport_duty',
+        'get_inboundtcs_supplier_transport_duty', 'get_inboundtcs_sgm_returnable_duty',
+        'get_inboundtcs_supplier_returnable_duty', 'get_inboundtcs_consignment_mode', 'get_inboundtcs_comments',
+
+        'get_inboundbuyer_buyer', 'get_inboundbuyer_contract_incoterm',
+        'get_inboundbuyer_contract_supplier_transportation_cost', 'get_inboundbuyer_contract_supplier_pkg_cost',
+        'get_inboundbuyer_contract_supplier_seq_cost',
+
         'get_inboundaddress_fu_address', 'get_inboundaddress_mr_address', 'get_inboundaddress_property',
         'get_inboundaddress_region_division', 'get_inboundaddress_country',
         'get_inboundaddress_province', 'get_inboundaddress_city', 'get_inboundaddress_mfg_location',
         'get_inboundaddress_distance_to_sgm_plant',
         'get_inboundaddress_distance_to_shanghai_cc', 'get_inboundaddress_warehouse_address',
-        'get_inboundbuyer_buyer', 'get_inboundbuyer_contract_incoterm',
-        'get_inboundbuyer_contract_supplier_transportation_cost', 'get_inboundbuyer_contract_supplier_pkg_cost',
-        'get_inboundbuyer_contract_supplier_seq_cost', 'get_inboundheaderpart_head_part_number',
-        'get_inboundheaderpart_assembly_supplier', 'get_inboundheaderpart_color',
-        'get_inboundmode_logistics_incoterm_mode', 'get_inboundmode_operation_mode',
+        'get_inboundaddress_warehouse_to_sgm_plant',
+
         'get_inboundoperationalmode_ckd_logistics_mode', 'get_inboundoperationalmode_planned_logistics_mode',
         'get_inboundoperationalmode_if_supplier_seq', 'get_inboundoperationalmode_payment_mode',
-        'get_inboundoperationalpackage_supplier_pkg_name', 'get_inboundoperationalpackage_supplier_pkg_pcs',
-        'get_inboundoperationalpackage_supplier_pkg_length', 'get_inboundoperationalpackage_supplier_pkg_width',
-        'get_inboundoperationalpackage_supplier_pkg_height', 'get_inboundoperationalpackage_supplier_pkg_folding_rate',
-        'get_inboundoperationalpackage_sgm_pkg_name', 'get_inboundoperationalpackage_sgm_pkg_pcs',
-        'get_inboundoperationalpackage_sgm_pkg_length', 'get_inboundoperationalpackage_sgm_pkg_width',
-        'get_inboundoperationalpackage_sgm_pkg_height', 'get_inboundoperationalpackage_sgm_pkg_folding_rate',
-        'get_inboundpackage_supplier_pkg_name', 'get_inboundpackage_supplier_pkg_pcs',
-        'get_inboundpackage_supplier_pkg_length', 'get_inboundpackage_supplier_pkg_width',
-        'get_inboundpackage_supplier_pkg_height', 'get_inboundpackage_supplier_pkg_folding_rate',
-        'get_inboundpackage_supplier_pkg_cubic_pcs', 'get_inboundpackage_supplier_pkg_cubic_veh',
-        'get_inboundpackage_sgm_pkg_name', 'get_inboundpackage_sgm_pkg_pcs', 'get_inboundpackage_sgm_pkg_length',
-        'get_inboundpackage_sgm_pkg_width', 'get_inboundpackage_sgm_pkg_height',
-        'get_inboundpackage_sgm_pkg_folding_rate', 'get_inboundpackage_sgm_pkg_cubic_pcs',
-        'get_inboundpackage_sgm_pkg_cubic_veh', 'get_inboundpackage_cubic_matrix', 'get_inboundtcs_bidder_list_number',
-        'get_inboundtcs_program', 'get_inboundtcs_supplier_ship_from_address', 'get_inboundtcs_process',
-        'get_inboundtcs_suggest_delivery_method', 'get_inboundtcs_sgm_transport_duty',
-        'get_inboundtcs_supplier_transport_duty', 'get_inboundtcs_sgm_returnable_duty',
-        'get_inboundtcs_supplier_returnable_duty', 'get_inboundtcs_consignment_mode', 'get_inboundtcs_comments',
+
+        'get_inboundmode_logistics_incoterm_mode', 'get_inboundmode_operation_mode',
+
         'get_inboundtcspackage_supplier_pkg_name', 'get_inboundtcspackage_supplier_pkg_pcs',
         'get_inboundtcspackage_supplier_pkg_length', 'get_inboundtcspackage_supplier_pkg_width',
         'get_inboundtcspackage_supplier_pkg_height', 'get_inboundtcspackage_supplier_pkg_folding_rate',
@@ -246,6 +246,23 @@ class EbomAdmin(admin.ModelAdmin):
         'get_inboundtcspackage_sgm_pkg_name', 'get_inboundtcspackage_sgm_pkg_pcs',
         'get_inboundtcspackage_sgm_pkg_length', 'get_inboundtcspackage_sgm_pkg_width',
         'get_inboundtcspackage_sgm_pkg_height', 'get_inboundtcspackage_sgm_pkg_folding_rate',
+
+        'get_inboundoperationalpackage_supplier_pkg_name', 'get_inboundoperationalpackage_supplier_pkg_pcs',
+        'get_inboundoperationalpackage_supplier_pkg_length', 'get_inboundoperationalpackage_supplier_pkg_width',
+        'get_inboundoperationalpackage_supplier_pkg_height', 'get_inboundoperationalpackage_supplier_pkg_folding_rate',
+        'get_inboundoperationalpackage_sgm_pkg_name', 'get_inboundoperationalpackage_sgm_pkg_pcs',
+        'get_inboundoperationalpackage_sgm_pkg_length', 'get_inboundoperationalpackage_sgm_pkg_width',
+        'get_inboundoperationalpackage_sgm_pkg_height', 'get_inboundoperationalpackage_sgm_pkg_folding_rate',
+
+        'get_inboundpackage_supplier_pkg_name', 'get_inboundpackage_supplier_pkg_pcs',
+        'get_inboundpackage_supplier_pkg_length', 'get_inboundpackage_supplier_pkg_width',
+        'get_inboundpackage_supplier_pkg_height', 'get_inboundpackage_supplier_pkg_folding_rate',
+        'get_inboundpackage_supplier_pkg_cubic_pcs', 'get_inboundpackage_supplier_pkg_cubic_veh',
+        'get_inboundpackage_sgm_pkg_name', 'get_inboundpackage_sgm_pkg_pcs', 'get_inboundpackage_sgm_pkg_length',
+        'get_inboundpackage_sgm_pkg_width', 'get_inboundpackage_sgm_pkg_height',
+        'get_inboundpackage_sgm_pkg_folding_rate', 'get_inboundpackage_sgm_pkg_cubic_pcs',
+        'get_inboundpackage_sgm_pkg_cubic_veh', 'get_inboundpackage_cubic_matrix',
+
         'get_inboundcalculation_ddp_pcs', 'get_inboundcalculation_linehaul_oneway_pcs',
         'get_inboundcalculation_linehaul_vmi_pcs', 'get_inboundcalculation_linehaul_backway_pcs',
         'get_inboundcalculation_dom_truck_ttl_pcs', 'get_inboundcalculation_dom_water_oneway_pcs',
@@ -289,6 +306,14 @@ class EbomAdmin(admin.ModelAdmin):
         InboundPackageInline,
         InboundCalculationInline
     ]
+
+    def get_quantity(self, obj):
+        """ max of configuration quanity. """
+        _ = self
+        conf_objects = obj.rel_configuration
+        return conf_objects.aggregate(Max('quantity'))['quantity__max']
+
+    get_quantity.short_description = 'Quantity'
 
     def get_inboundaddress_fu_address(self, obj):
         """ 运作功能块地址 & 最终地址梳理, FU提供的原始地址信息 """
@@ -2122,3 +2147,16 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
     download_tcs_template.allow_tags = True
     download_buyer_template.allow_tags = True
+
+
+@admin.register(models.Constants)
+class ConstantsAdmin(admin.ModelAdmin):
+    """ Constants """
+    list_display = (
+        'constant_key',
+        'constant_value_float'
+    )
+
+    search_fields = [
+        'constant_key'
+    ]
