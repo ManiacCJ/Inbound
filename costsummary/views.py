@@ -191,3 +191,9 @@ def download_wide_table(request, nl_mapping_id):
     label = models.NominalLabelMapping.objects.get(pk=nl_mapping_id)
 
     return django_excel.make_response_from_array(wide_table_matrix, 'xls', file_name=str(label))
+
+
+def upload_wide_table(request):
+    """ Upload &  wide table. """
+
+    return HttpResponse('good')

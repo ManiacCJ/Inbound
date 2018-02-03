@@ -181,6 +181,11 @@ class InboundPackageInline(admin.StackedInline):
     extra = 0
 
 
+class InboundCalculationInline(admin.StackedInline):
+    model = models.InboundCalculation
+    extra = 0
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -265,6 +270,7 @@ class EbomAdmin(admin.ModelAdmin):
         InboundModeInline,
         InboundOperationalPackageInline,
         InboundPackageInline,
+        InboundCalculationInline
     ]
 
     def get_inboundaddress_fu_address(self, obj):

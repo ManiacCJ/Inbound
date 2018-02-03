@@ -15,4 +15,5 @@ urlpatterns = [
 
     url(r'^entry$', views.group_ebom_by_label, name='entry'),
     url(r'^dl/wide/(?P<nl_mapping_id>[0-9]+)$', views.download_wide_table, name='dl_wide'),
+    url(r'^ul/wide$', views.upload_wide_table, name='ul_wide'),
 ]

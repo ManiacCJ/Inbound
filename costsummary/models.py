@@ -128,7 +128,7 @@ class Ebom(models.Model):
 
     # dependent field
     duns = models.CharField(max_length=32, null=True, blank=True, editable=False)
-    tec = models.ForeignKey(TecCore, null=True, blank=True, verbose_name='TEC No.')
+    tec = models.ForeignKey(TecCore, null=True, blank=True, verbose_name='TEC No.', on_delete=None)
 
     class Meta:
         verbose_name = 'EBOM 数据'
@@ -190,7 +190,7 @@ class AEbomEntry(models.Model):
 
     row_count = models.IntegerField(null=True, blank=True)
 
-    user = models.ForeignKey(User, null=True, blank=True, default=None)
+    user = models.ForeignKey(User, null=True, blank=True, default=None, on_delete=None)
     whether_loaded = models.BooleanField(default=False, verbose_name='是否已加载')
     etl_time = models.DateField(auto_now_add=True)
     loaded_time = models.DateTimeField(null=True, blank=True)
@@ -354,7 +354,8 @@ class InboundAddress(models.Model):
     property_choice = ((1, '国产'), (2, '进口'), (3, '自制'))
     property = models.IntegerField(choices=property_choice, null=True, blank=True, verbose_name='国产/进口/自制')
 
-    supplier_matched = models.ForeignKey(Supplier, null=True, blank=True, verbose_name='供应商 (匹配DUNS)')
+    supplier_matched = models.ForeignKey(Supplier, null=True, blank=True, verbose_name='供应商 (匹配DUNS)',
+                                         on_delete=None)
 
     region_division = models.CharField(max_length=64, null=True, blank=True, verbose_name='区域划分')
     country = models.CharField(max_length=64, null=True, blank=True, verbose_name='国家')
@@ -363,7 +364,7 @@ class InboundAddress(models.Model):
     mfg_location = models.CharField(max_length=128, null=True, blank=True, verbose_name='生产地址')
 
     supplier_distance_matched = models.ForeignKey(SupplierDistance, null=True, blank=True,
-                                                  verbose_name='SGM PLANT')
+                                                  verbose_name='SGM PLANT', on_delete=None)
 
     distance_to_sgm_plant = models.FloatField(null=True, blank=True, verbose_name='运输距离-至生产厂区')
     distance_to_shanghai_cc = models.FloatField(null=True, blank=True, verbose_name='运输距离-金桥C类')
@@ -443,9 +444,8 @@ class InboundTCSPackage(models.Model):
         """ dependent fields """
         if not self.supplier_pkg_cubic_pcs:
             try:
-                self.supplier_pkg_cubic_pcs = (
-                        self.supplier_pkg_length * self.supplier_pkg_height * self.supplier_pkg_width
-                ) / self.supplier_pkg_pcs / 1e9
+                self.supplier_pkg_cubic_pcs = (self.supplier_pkg_length * self.supplier_pkg_height *
+                                               self.supplier_pkg_width) / self.supplier_pkg_pcs / 1e9
 
             except (TypeError, ZeroDivisionError) as e:
                 print(e)
@@ -614,3 +614,51 @@ class UploadHandler(models.Model):
             old_object.delete()
 
         super().save(*args, **kwargs)
+
+
+class InboundCalculation(models.Model):
+    """ Fields to be calculated. """
+    bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
+
+    ddp_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 DDP运费/pcs')
+    linehaul_oneway_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 干线去程/pcs')
+    linehaul_vmi_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 干线VMI/pcs')
+    linehaul_backway_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 干线返程/pcs')
+    dom_truck_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 国内陆运/pcs')
+    dom_water_oneway_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 国内水运-去程/pcs')
+    dom_cc_operation_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 国内CC操作费/pcs')
+    dom_water_backway_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 国内水运-返程/pcs')
+    dom_water_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 国内水运/pcs')
+    oversea_inland_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 海外段内陆运输/pcs')
+    oversea_cc_op_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 海外CC操作费/pcs')
+    international_ocean_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 国际海运费/pcs')
+    dom_pull_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 国内拉动费/pcs')
+    certificate_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 单证费/pcs')
+    oversea_ocean_ttl_pcs = models.IntegerField(null=True, blank=True, verbose_name='公式测算 进口海运/pcs')
+    oversea_air_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 进口空运/pcs')
+    inbound_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='公式测算 IB Cost')
+
+    ddp_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 DDP运费/veh')
+    linehaul_oneway_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 干线去程/veh')
+    linehaul_vmi_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 干线VMI/veh')
+    linehaul_backway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 干线返程/veh')
+    dom_truck_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内陆运/veh')
+    dom_water_oneway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内海运-去程/veh')
+    dom_cc_operation_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内CC操作费/veh')
+    dom_water_backway_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 国内海运-返程/veh')
+    dom_water_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内海运/veh')
+    oversea_inland_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 海外段内陆运输/veh')
+    oversea_cc_op_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 海外CC操作费/veh')
+    international_ocean_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国际海运费/veh')
+    dom_pull_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内拉动费/veh')
+    certificate_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 单证费/veh')
+    oversea_ocean_ttl_veh = models.IntegerField(null=True, blank=True, verbose_name='单车费用 进口海运/veh')
+    oversea_air_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 进口空运/veh')
+    inbound_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 TTL IB Cost')
+
+    class Meta:
+        verbose_name = '计算'
+        verbose_name_plural = '计算'
+
+    def __str__(self):
+        return '零件 %s' % str(self.bom)
