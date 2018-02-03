@@ -4,7 +4,7 @@ import inspect
 from django.http import HttpResponse
 from django.db import connection as RawConnection
 from django.db.models import Model
-from django.shortcuts import Http404
+from django.shortcuts import Http404, redirect, reverse
 from django.contrib.admin import site as wide_table_dummy_param
 
 import django_excel
@@ -216,3 +216,11 @@ def upload_wide_table(request):
     """ Upload &  wide table. """
 
     return HttpResponse('good')
+
+
+def clear_label_session(request):
+    """ Clear session of label. """
+    if 'label' in request.session:
+        request.session.pop('label')
+
+    return redirect(reverse(f'admin:costsummary_{models.Ebom._meta.model_name}_changelist'))

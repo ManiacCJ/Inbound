@@ -307,6 +307,20 @@ class EbomAdmin(admin.ModelAdmin):
         InboundCalculationInline
     ]
 
+    def changelist_view(self, request, extra_context=None):
+        """ filter by session value """
+        q = request.GET.copy()
+
+        if 'label__id__exact' in q:
+            request.session['label'] = q['label__id__exact']
+
+        else:
+            if 'label' in request.session:
+                q['label__id__exact'] = request.session['label']
+                request.GET = q
+
+        return super(EbomAdmin, self).changelist_view(request, extra_context=extra_context)
+
     def get_quantity(self, obj):
         """ max of configuration quanity. """
         _ = self
