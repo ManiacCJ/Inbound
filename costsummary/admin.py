@@ -309,7 +309,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_address
 
             if hasattr(rel_obj, 'property'):
-                return rel_obj.property
+                return rel_obj.get_property_display()
 
         return None
 
@@ -575,7 +575,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_mode
 
             if hasattr(rel_obj, 'operation_mode'):
-                return rel_obj.operation_mode
+                return rel_obj.get_operation_mode_display()
 
         return None
 
@@ -1093,7 +1093,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'process'):
-                return rel_obj.process
+                return rel_obj.get_process_display()
 
         return None
 
@@ -1107,7 +1107,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'suggest_delivery_method'):
-                return rel_obj.suggest_delivery_method
+                return rel_obj.get_suggest_delivery_method_display()
 
         return None
 
@@ -1121,7 +1121,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'sgm_transport_duty'):
-                return rel_obj.sgm_transport_duty
+                return rel_obj.get_sgm_transport_duty_display()
 
         return None
 
@@ -1135,7 +1135,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'supplier_transport_duty'):
-                return rel_obj.supplier_transport_duty
+                return rel_obj.get_supplier_transport_duty_display()
 
         return None
 
@@ -1149,7 +1149,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'sgm_returnable_duty'):
-                return rel_obj.sgm_returnable_duty
+                return rel_obj.get_sgm_returnable_duty_display()
 
         return None
 
@@ -1163,7 +1163,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'supplier_returnable_duty'):
-                return rel_obj.supplier_returnable_duty
+                return rel_obj.get_supplier_returnable_duty_display()
 
         return None
 
@@ -1177,7 +1177,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'consignment_mode'):
-                return rel_obj.consignment_mode
+                return rel_obj.get_consignment_mode_display()
 
         return None
 
