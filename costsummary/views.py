@@ -100,9 +100,21 @@ get_{model_name}_{field_name}.short_description = '{model_verbose_name}/{field_v
     dsl_str = ''
     list_display_fields = []
 
+    # specify model
+    sp_model_name = request.GET.get('mn')
+
+    def match_sp_model_name(_name: str):
+        if not sp_model_name:
+            return True
+        else:
+            if sp_model_name.upper() == _name.upper():
+                return True
+            else:
+                return False
+
     # get all inbound models
     for name, ib_model in inspect.getmembers(models):
-        if inspect.isclass(ib_model) and name[0: 7] == 'Inbound':
+        if inspect.isclass(ib_model) and name[0: 7] == 'Inbound' and match_sp_model_name(name):
 
             # get meta class
             meta_cls = getattr(ib_model, '_meta')
@@ -131,7 +143,8 @@ get_{model_name}_{field_name}.short_description = '{model_verbose_name}/{field_v
                     }
 
                     dsl_str += dep_field_makeup.format(**context)
-                    dsl_str += str(list_display_fields)
+
+    dsl_str += str(list_display_fields)
 
     return HttpResponse(dsl_str, content_type='text/plain')
 

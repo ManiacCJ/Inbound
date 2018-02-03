@@ -246,6 +246,23 @@ class EbomAdmin(admin.ModelAdmin):
         'get_inboundtcspackage_sgm_pkg_name', 'get_inboundtcspackage_sgm_pkg_pcs',
         'get_inboundtcspackage_sgm_pkg_length', 'get_inboundtcspackage_sgm_pkg_width',
         'get_inboundtcspackage_sgm_pkg_height', 'get_inboundtcspackage_sgm_pkg_folding_rate',
+        'get_inboundcalculation_ddp_pcs', 'get_inboundcalculation_linehaul_oneway_pcs',
+        'get_inboundcalculation_linehaul_vmi_pcs', 'get_inboundcalculation_linehaul_backway_pcs',
+        'get_inboundcalculation_dom_truck_ttl_pcs', 'get_inboundcalculation_dom_water_oneway_pcs',
+        'get_inboundcalculation_dom_cc_operation_pcs', 'get_inboundcalculation_dom_water_backway_pcs',
+        'get_inboundcalculation_dom_water_ttl_pcs', 'get_inboundcalculation_oversea_inland_pcs',
+        'get_inboundcalculation_oversea_cc_op_pcs', 'get_inboundcalculation_international_ocean_pcs',
+        'get_inboundcalculation_dom_pull_pcs', 'get_inboundcalculation_certificate_pcs',
+        'get_inboundcalculation_oversea_ocean_ttl_pcs', 'get_inboundcalculation_oversea_air_pcs',
+        'get_inboundcalculation_inbound_ttl_pcs', 'get_inboundcalculation_ddp_veh',
+        'get_inboundcalculation_linehaul_oneway_veh', 'get_inboundcalculation_linehaul_vmi_veh',
+        'get_inboundcalculation_linehaul_backway_veh', 'get_inboundcalculation_dom_truck_ttl_veh',
+        'get_inboundcalculation_dom_water_oneway_veh', 'get_inboundcalculation_dom_cc_operation_veh',
+        'get_inboundcalculation_dom_water_backway_veh', 'get_inboundcalculation_dom_water_ttl_veh',
+        'get_inboundcalculation_oversea_inland_veh', 'get_inboundcalculation_oversea_cc_op_veh',
+        'get_inboundcalculation_international_ocean_veh', 'get_inboundcalculation_dom_pull_veh',
+        'get_inboundcalculation_certificate_veh', 'get_inboundcalculation_oversea_ocean_ttl_veh',
+        'get_inboundcalculation_oversea_air_veh', 'get_inboundcalculation_inbound_ttl_veh'
     )
 
     search_fields = [
@@ -1393,6 +1410,482 @@ class EbomAdmin(admin.ModelAdmin):
 
     get_inboundtcspackage_sgm_pkg_folding_rate.short_description = 'TCS包装/先期规划包装折叠率'
 
+    def get_inboundcalculation_ddp_pcs(self, obj):
+        """ 计算, DDP运费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'ddp_pcs'):
+                return rel_obj.ddp_pcs
+
+        return None
+
+    get_inboundcalculation_ddp_pcs.short_description = '计算/DDP运费/pcs'
+
+    def get_inboundcalculation_linehaul_oneway_pcs(self, obj):
+        """ 计算, 干线去程/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_oneway_pcs'):
+                return rel_obj.linehaul_oneway_pcs
+
+        return None
+
+    get_inboundcalculation_linehaul_oneway_pcs.short_description = '计算/干线去程/pcs'
+
+    def get_inboundcalculation_linehaul_vmi_pcs(self, obj):
+        """ 计算, 干线VMI/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_vmi_pcs'):
+                return rel_obj.linehaul_vmi_pcs
+
+        return None
+
+    get_inboundcalculation_linehaul_vmi_pcs.short_description = '计算/干线VMI/pcs'
+
+    def get_inboundcalculation_linehaul_backway_pcs(self, obj):
+        """ 计算, 干线返程/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_backway_pcs'):
+                return rel_obj.linehaul_backway_pcs
+
+        return None
+
+    get_inboundcalculation_linehaul_backway_pcs.short_description = '计算/干线返程/pcs'
+
+    def get_inboundcalculation_dom_truck_ttl_pcs(self, obj):
+        """ 计算, 国内陆运/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_truck_ttl_pcs'):
+                return rel_obj.dom_truck_ttl_pcs
+
+        return None
+
+    get_inboundcalculation_dom_truck_ttl_pcs.short_description = '计算/国内陆运/pcs'
+
+    def get_inboundcalculation_dom_water_oneway_pcs(self, obj):
+        """ 计算, 国内水运-去程/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_oneway_pcs'):
+                return rel_obj.dom_water_oneway_pcs
+
+        return None
+
+    get_inboundcalculation_dom_water_oneway_pcs.short_description = '计算/国内水运-去程/pcs'
+
+    def get_inboundcalculation_dom_cc_operation_pcs(self, obj):
+        """ 计算, 国内CC操作费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_cc_operation_pcs'):
+                return rel_obj.dom_cc_operation_pcs
+
+        return None
+
+    get_inboundcalculation_dom_cc_operation_pcs.short_description = '计算/国内CC操作费/pcs'
+
+    def get_inboundcalculation_dom_water_backway_pcs(self, obj):
+        """ 计算, 国内水运-返程/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_backway_pcs'):
+                return rel_obj.dom_water_backway_pcs
+
+        return None
+
+    get_inboundcalculation_dom_water_backway_pcs.short_description = '计算/国内水运-返程/pcs'
+
+    def get_inboundcalculation_dom_water_ttl_pcs(self, obj):
+        """ 计算, 国内水运/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_ttl_pcs'):
+                return rel_obj.dom_water_ttl_pcs
+
+        return None
+
+    get_inboundcalculation_dom_water_ttl_pcs.short_description = '计算/国内水运/pcs'
+
+    def get_inboundcalculation_oversea_inland_pcs(self, obj):
+        """ 计算, 海外段内陆运输/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_inland_pcs'):
+                return rel_obj.oversea_inland_pcs
+
+        return None
+
+    get_inboundcalculation_oversea_inland_pcs.short_description = '计算/海外段内陆运输/pcs'
+
+    def get_inboundcalculation_oversea_cc_op_pcs(self, obj):
+        """ 计算, 海外CC操作费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_cc_op_pcs'):
+                return rel_obj.oversea_cc_op_pcs
+
+        return None
+
+    get_inboundcalculation_oversea_cc_op_pcs.short_description = '计算/海外CC操作费/pcs'
+
+    def get_inboundcalculation_international_ocean_pcs(self, obj):
+        """ 计算, 国际海运费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'international_ocean_pcs'):
+                return rel_obj.international_ocean_pcs
+
+        return None
+
+    get_inboundcalculation_international_ocean_pcs.short_description = '计算/国际海运费/pcs'
+
+    def get_inboundcalculation_dom_pull_pcs(self, obj):
+        """ 计算, 国内拉动费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_pull_pcs'):
+                return rel_obj.dom_pull_pcs
+
+        return None
+
+    get_inboundcalculation_dom_pull_pcs.short_description = '计算/国内拉动费/pcs'
+
+    def get_inboundcalculation_certificate_pcs(self, obj):
+        """ 计算, 单证费/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'certificate_pcs'):
+                return rel_obj.certificate_pcs
+
+        return None
+
+    get_inboundcalculation_certificate_pcs.short_description = '计算/单证费/pcs'
+
+    def get_inboundcalculation_oversea_ocean_ttl_pcs(self, obj):
+        """ 计算, 进口海运/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_ocean_ttl_pcs'):
+                return rel_obj.oversea_ocean_ttl_pcs
+
+        return None
+
+    get_inboundcalculation_oversea_ocean_ttl_pcs.short_description = '计算/进口海运/pcs'
+
+    def get_inboundcalculation_oversea_air_pcs(self, obj):
+        """ 计算, 进口空运/pcs """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_air_pcs'):
+                return rel_obj.oversea_air_pcs
+
+        return None
+
+    get_inboundcalculation_oversea_air_pcs.short_description = '计算/进口空运/pcs'
+
+    def get_inboundcalculation_inbound_ttl_pcs(self, obj):
+        """ 计算, IB Cost """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'inbound_ttl_pcs'):
+                return rel_obj.inbound_ttl_pcs
+
+        return None
+
+    get_inboundcalculation_inbound_ttl_pcs.short_description = '计算/IB Cost'
+
+    def get_inboundcalculation_ddp_veh(self, obj):
+        """ 计算, 单车费用 DDP运费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'ddp_veh'):
+                return rel_obj.ddp_veh
+
+        return None
+
+    get_inboundcalculation_ddp_veh.short_description = '计算/单车费用 DDP运费/veh'
+
+    def get_inboundcalculation_linehaul_oneway_veh(self, obj):
+        """ 计算, 单车费用 干线去程/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_oneway_veh'):
+                return rel_obj.linehaul_oneway_veh
+
+        return None
+
+    get_inboundcalculation_linehaul_oneway_veh.short_description = '计算/单车费用 干线去程/veh'
+
+    def get_inboundcalculation_linehaul_vmi_veh(self, obj):
+        """ 计算, 单车费用 干线VMI/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_vmi_veh'):
+                return rel_obj.linehaul_vmi_veh
+
+        return None
+
+    get_inboundcalculation_linehaul_vmi_veh.short_description = '计算/单车费用 干线VMI/veh'
+
+    def get_inboundcalculation_linehaul_backway_veh(self, obj):
+        """ 计算, 单车费用 干线返程/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'linehaul_backway_veh'):
+                return rel_obj.linehaul_backway_veh
+
+        return None
+
+    get_inboundcalculation_linehaul_backway_veh.short_description = '计算/单车费用 干线返程/veh'
+
+    def get_inboundcalculation_dom_truck_ttl_veh(self, obj):
+        """ 计算, 单车费用 国内陆运/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_truck_ttl_veh'):
+                return rel_obj.dom_truck_ttl_veh
+
+        return None
+
+    get_inboundcalculation_dom_truck_ttl_veh.short_description = '计算/单车费用 国内陆运/veh'
+
+    def get_inboundcalculation_dom_water_oneway_veh(self, obj):
+        """ 计算, 单车费用 国内海运-去程/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_oneway_veh'):
+                return rel_obj.dom_water_oneway_veh
+
+        return None
+
+    get_inboundcalculation_dom_water_oneway_veh.short_description = '计算/单车费用 国内海运-去程/veh'
+
+    def get_inboundcalculation_dom_cc_operation_veh(self, obj):
+        """ 计算, 单车费用 国内CC操作费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_cc_operation_veh'):
+                return rel_obj.dom_cc_operation_veh
+
+        return None
+
+    get_inboundcalculation_dom_cc_operation_veh.short_description = '计算/单车费用 国内CC操作费/veh'
+
+    def get_inboundcalculation_dom_water_backway_veh(self, obj):
+        """ 计算, 单车费用 国内海运-返程/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_backway_veh'):
+                return rel_obj.dom_water_backway_veh
+
+        return None
+
+    get_inboundcalculation_dom_water_backway_veh.short_description = '计算/单车费用 国内海运-返程/veh'
+
+    def get_inboundcalculation_dom_water_ttl_veh(self, obj):
+        """ 计算, 单车费用 国内海运/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_water_ttl_veh'):
+                return rel_obj.dom_water_ttl_veh
+
+        return None
+
+    get_inboundcalculation_dom_water_ttl_veh.short_description = '计算/单车费用 国内海运/veh'
+
+    def get_inboundcalculation_oversea_inland_veh(self, obj):
+        """ 计算, 单车费用 海外段内陆运输/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_inland_veh'):
+                return rel_obj.oversea_inland_veh
+
+        return None
+
+    get_inboundcalculation_oversea_inland_veh.short_description = '计算/单车费用 海外段内陆运输/veh'
+
+    def get_inboundcalculation_oversea_cc_op_veh(self, obj):
+        """ 计算, 单车费用 海外CC操作费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_cc_op_veh'):
+                return rel_obj.oversea_cc_op_veh
+
+        return None
+
+    get_inboundcalculation_oversea_cc_op_veh.short_description = '计算/单车费用 海外CC操作费/veh'
+
+    def get_inboundcalculation_international_ocean_veh(self, obj):
+        """ 计算, 单车费用 国际海运费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'international_ocean_veh'):
+                return rel_obj.international_ocean_veh
+
+        return None
+
+    get_inboundcalculation_international_ocean_veh.short_description = '计算/单车费用 国际海运费/veh'
+
+    def get_inboundcalculation_dom_pull_veh(self, obj):
+        """ 计算, 单车费用 国内拉动费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'dom_pull_veh'):
+                return rel_obj.dom_pull_veh
+
+        return None
+
+    get_inboundcalculation_dom_pull_veh.short_description = '计算/单车费用 国内拉动费/veh'
+
+    def get_inboundcalculation_certificate_veh(self, obj):
+        """ 计算, 单车费用 单证费/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'certificate_veh'):
+                return rel_obj.certificate_veh
+
+        return None
+
+    get_inboundcalculation_certificate_veh.short_description = '计算/单车费用 单证费/veh'
+
+    def get_inboundcalculation_oversea_ocean_ttl_veh(self, obj):
+        """ 计算, 单车费用 进口海运/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_ocean_ttl_veh'):
+                return rel_obj.oversea_ocean_ttl_veh
+
+        return None
+
+    get_inboundcalculation_oversea_ocean_ttl_veh.short_description = '计算/单车费用 进口海运/veh'
+
+    def get_inboundcalculation_oversea_air_veh(self, obj):
+        """ 计算, 单车费用 进口空运/veh """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'oversea_air_veh'):
+                return rel_obj.oversea_air_veh
+
+        return None
+
+    get_inboundcalculation_oversea_air_veh.short_description = '计算/单车费用 进口空运/veh'
+
+    def get_inboundcalculation_inbound_ttl_veh(self, obj):
+        """ 计算, 单车费用 TTL IB Cost """
+        _ = self
+
+        if hasattr(obj, 'rel_calc'):
+            rel_obj = obj.rel_calc
+
+            if hasattr(rel_obj, 'inbound_ttl_veh'):
+                return rel_obj.inbound_ttl_veh
+
+        return None
+
+    get_inboundcalculation_inbound_ttl_veh.short_description = '计算/单车费用 TTL IB Cost'
+
 
 @admin.register(models.AEbomEntry)
 class AEbomEntryAdmin(admin.ModelAdmin):
@@ -1539,12 +2032,19 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                             )
                             op_pkg_object.save()
 
-                        # header part object
+                        # package object
                         if not hasattr(ebom_object, 'rel_package'):
                             pkg_object = models.InboundPackage(
                                 bom=ebom_object
                             )
                             pkg_object.save()
+
+                        # calculation object
+                        if not hasattr(ebom_object, 'rel_calc'):
+                            calc_object = models.InboundCalculation(
+                                bom=ebom_object
+                            )
+                            calc_object.save()
 
                     # update entry object
                     entry_object.whether_loaded = True
