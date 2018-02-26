@@ -138,14 +138,15 @@ class Ebom(models.Model):
         return self.part_number
 
     def save(self, *args, **kwargs):
-        _duns = self.vendor_duns_number.split('_')
+        if self.vendor_duns_number:
+            _duns = self.vendor_duns_number.split('_')
 
-        try:
-            self.duns = int(_duns[0])
+            try:
+                self.duns = int(_duns[0])
 
-        except ValueError as e:
-            print(e)
-            self.duns = None
+            except ValueError as e:
+                print(e)
+                self.duns = None
 
         if self.description_en:
             self.tec = TecCore.objects.filter(mgo_part_name_list__contains=self.description_en.upper()).first()

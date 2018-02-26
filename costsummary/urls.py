@@ -9,6 +9,7 @@ urlpatterns = [
     url(r'^initialize/nl$', views.initialize_data, {'data': 'nl'}),
     url(r'^initialize/supplier', views.initialize_data, {'data': 'supplier'}),
     url(r'^dsl/foreign-fields', views.dsl_list_display_foreign_fields),
+    url(r'^dsl/wide-schema', views.dsl_parse_wide_schema),
 
     url(r'^sheet/tcs$', views.download_sheet_template, {'sheet': 'tcs'}),
     url(r'^sheet/buyer$', views.download_sheet_template, {'sheet': 'buyer'}),
@@ -16,6 +17,5 @@ urlpatterns = [
 
     url(r'^entry$', views.group_ebom_by_label, name='entry'),
     url(r'^dl/wide/(?P<nl_mapping_id>[0-9]+)$', views.download_wide_table, name='dl_wide'),
-    url(r'^ul/wide$', views.upload_wide_table, name='ul_wide'),
     url(r'^session/clear$', views.clear_label_session, name='session_clear'),
 ]

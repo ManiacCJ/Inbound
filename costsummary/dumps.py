@@ -336,7 +336,7 @@ class ParseArray:
             row = matrix[i]
 
             for j in range(len(row)):
-                cell = row[j]
+                cell = str(row[j])
 
                 for k in range(len(TCS_HEADER)):
                     if cell.strip().upper() == TCS_HEADER[k]['ex_header']:
@@ -458,7 +458,7 @@ class ParseArray:
             row = matrix[i]
 
             for j in range(len(row)):
-                cell = row[j]
+                cell = str(row[j])
 
                 for k in range(len(BUYER_HEADER)):
                     if cell.strip().upper() == BUYER_HEADER[k]['ex_header']:

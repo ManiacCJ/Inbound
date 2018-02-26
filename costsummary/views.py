@@ -6,6 +6,7 @@ from django.db import connection as RawConnection
 from django.db.models import Model
 from django.shortcuts import Http404, redirect, reverse
 from django.contrib.admin import site as wide_table_dummy_param
+from django.apps import apps
 
 import django_excel
 
@@ -214,15 +215,82 @@ def download_wide_table(request, nl_mapping_id):
     return django_excel.make_response_from_array(wide_table_matrix, 'xls', file_name=str(label))
 
 
-def upload_wide_table(request):
-    """ Upload & parse wide table. """
-
-    return HttpResponse('good')
-
-
 def clear_label_session(request):
     """ Clear session of label. """
     if 'label' in request.session:
         request.session.pop('label')
 
     return redirect(reverse(f'admin:costsummary_{models.Ebom._meta.model_name}_changelist'))
+
+
+def dsl_parse_wide_schema(request):
+    """ Schema to parse wide table. """
+    # generate header
+    all_fields = WideTable.list_display
+    concerned_fields = [e for e in all_fields if e not in ('label',)]
+
+    # native fields are ones of Ebom class
+    is_native = []
+    header = []
+    ebom_fields = dict([
+        (e.name, e.verbose_name if hasattr(e, 'verbose_name') else e.name)
+        for e in models.Ebom._meta.get_fields()
+    ])
+
+    for field in concerned_fields:
+        if not hasattr(WideTable, field):
+            if field in ebom_fields:
+                is_native.append(True)
+                header.append(ebom_fields[field])
+        else:
+            _method = getattr(WideTable, field)
+
+            if field[0: 4] == 'get_' and callable(_method):
+                is_native.append(False)
+                header.append(_method.short_description)
+
+    assert len(concerned_fields) == len(is_native)
+
+    # wide table header
+    WIDE_HEADER = []
+
+    for i in range(len(concerned_fields)):
+        skip = False
+
+        if is_native[i]:
+            model_name = 'ebom'
+            field_name = concerned_fields[i]
+        else:
+            model_field_name = concerned_fields[i][4:]
+
+            if model_field_name[0: 7] == 'inbound':
+                model_name = model_field_name[0: model_field_name.find('_')]
+                field_name = model_field_name[model_field_name.find('_') + 1:]
+            else:
+                model_name = 'ebom'
+                field_name = model_field_name
+                skip = True
+
+        model_class = apps.get_model('costsummary', model_name)
+        if hasattr(model_class, f'{field_name}_choice'):
+            match_display = True
+        else:
+            match_display = False
+
+        WIDE_HEADER.append({
+            'r_offset': 0,
+            'ex_header': header[i],
+            'in_header': concerned_fields[i],
+            'model_name': model_name,
+            'field_name': field_name,
+            'skip': skip,
+            'match_display': match_display
+        })
+
+    # print(WIDE_HEADER)
+    for i in range(len(WIDE_HEADER)):
+        WIDE_HEADER[i]['ex_header'] = WIDE_HEADER[i]['ex_header'].upper()  # upper-case
+
+    output_str = ', \n'.join([str(e) for e in WIDE_HEADER])
+
+    return HttpResponse(output_str, content_type='text/plain')

@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.shortcuts import Http404
 from django.db import connection as RawConnection
 from django.db.models import Max
+from django.apps import apps
 
 # import django_excel
 
@@ -2144,6 +2145,10 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             # Buyer data
             ParseArray.parse_buyer(matrix)
 
+        elif obj.model_name == 999:
+            # wide table
+            self.parse_wide(matrix)
+
         else:
             raise Http404('无法识别的数据模式.')
 
@@ -2171,6 +2176,462 @@ class UploadHandlerAdmin(admin.ModelAdmin):
     download_tcs_template.allow_tags = True
     download_buyer_template.allow_tags = True
     download_wide_template.allow_tags = True
+
+    def parse_wide(self, matrix: list):
+        """ Parse wide table """
+        _ = self
+
+        WIDE_HEADER = [
+            {'r_offset': 0, 'ex_header': 'UPC', 'in_header': 'upc', 'model_name': 'ebom', 'field_name': 'upc',
+             'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'FNA', 'in_header': 'fna', 'model_name': 'ebom', 'field_name': 'fna',
+             'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'STRUCTURE NODE', 'in_header': 'structure_node', 'model_name': 'ebom',
+             'field_name': 'structure_node', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TEC NO.', 'in_header': 'tec', 'model_name': 'ebom', 'field_name': 'tec_id',
+             'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'P/N-PART NUMBER', 'in_header': 'part_number', 'model_name': 'ebom',
+             'field_name': 'part_number', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'DESCRIPTION EN', 'in_header': 'description_en', 'model_name': 'ebom',
+             'field_name': 'description_en', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'DESCRIPTION CN', 'in_header': 'description_cn', 'model_name': 'ebom',
+             'field_name': 'description_cn', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'HEADER PART NUMBER', 'in_header': 'header_part_number', 'model_name': 'ebom',
+             'field_name': 'header_part_number', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'QUANTITY', 'in_header': 'get_quantity', 'model_name': 'ebom',
+             'field_name': 'quantity', 'skip': True, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'AR/EM MATERIAL INDICATOR', 'in_header': 'ar_em_material_indicator',
+             'model_name': 'ebom', 'field_name': 'ar_em_material_indicator', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'WORK SHOP', 'in_header': 'work_shop', 'model_name': 'ebom',
+             'field_name': 'work_shop', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'DUNS / VENDOR NUMBER', 'in_header': 'vendor_duns_number',
+             'model_name': 'ebom', 'field_name': 'vendor_duns_number', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'SUPPLIER NAME', 'in_header': 'supplier_name', 'model_name': 'ebom',
+             'field_name': 'supplier_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'EWO NUMBER', 'in_header': 'ewo_number', 'model_name': 'ebom',
+             'field_name': 'ewo_number', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'MODEL & OPTION', 'in_header': 'model_and_option', 'model_name': 'ebom',
+             'field_name': 'model_and_option', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'VPPS', 'in_header': 'vpps', 'model_name': 'ebom', 'field_name': 'vpps',
+             'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '头零件', 'in_header': 'get_inboundheaderpart_head_part_number',
+             'model_name': 'inboundheaderpart', 'field_name': 'head_part_number', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '头零件信息/总成供应商', 'in_header': 'get_inboundheaderpart_assembly_supplier',
+             'model_name': 'inboundheaderpart', 'field_name': 'assembly_supplier', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '头零件信息/颜色件', 'in_header': 'get_inboundheaderpart_color',
+             'model_name': 'inboundheaderpart', 'field_name': 'color', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/BIDDER号', 'in_header': 'get_inboundtcs_bidder_list_number',
+             'model_name': 'inboundtcs', 'field_name': 'bidder_list_number', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/定点项目', 'in_header': 'get_inboundtcs_program',
+             'model_name': 'inboundtcs', 'field_name': 'program', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/供应商发货地址', 'in_header': 'get_inboundtcs_supplier_ship_from_address',
+             'model_name': 'inboundtcs', 'field_name': 'supplier_ship_from_address', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/报价条款', 'in_header': 'get_inboundtcs_process',
+             'model_name': 'inboundtcs', 'field_name': 'process', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/运输模式', 'in_header': 'get_inboundtcs_suggest_delivery_method',
+             'model_name': 'inboundtcs', 'field_name': 'suggest_delivery_method', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/SGM运输责任', 'in_header': 'get_inboundtcs_sgm_transport_duty',
+             'model_name': 'inboundtcs', 'field_name': 'sgm_transport_duty', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/供应商运输责任', 'in_header': 'get_inboundtcs_supplier_transport_duty',
+             'model_name': 'inboundtcs', 'field_name': 'supplier_transport_duty', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/SGM外包装责任', 'in_header': 'get_inboundtcs_sgm_returnable_duty',
+             'model_name': 'inboundtcs', 'field_name': 'sgm_returnable_duty', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/供应商外包装责任', 'in_header': 'get_inboundtcs_supplier_returnable_duty',
+             'model_name': 'inboundtcs', 'field_name': 'supplier_returnable_duty', 'skip': False,
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/外协加工业务模式', 'in_header': 'get_inboundtcs_consignment_mode',
+             'model_name': 'inboundtcs', 'field_name': 'consignment_mode', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/备注', 'in_header': 'get_inboundtcs_comments',
+             'model_name': 'inboundtcs', 'field_name': 'comments', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '采购信息/采购员', 'in_header': 'get_inboundbuyer_buyer',
+             'model_name': 'inboundbuyer', 'field_name': 'buyer', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '采购信息/合同条款', 'in_header': 'get_inboundbuyer_contract_incoterm',
+             'model_name': 'inboundbuyer', 'field_name': 'contract_incoterm', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '采购信息/供应商运费',
+             'in_header': 'get_inboundbuyer_contract_supplier_transportation_cost', 'model_name': 'inboundbuyer',
+             'field_name': 'contract_supplier_transportation_cost', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '采购信息/供应商外包装费', 'in_header': 'get_inboundbuyer_contract_supplier_pkg_cost',
+             'model_name': 'inboundbuyer', 'field_name': 'contract_supplier_pkg_cost', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '采购信息/供应商排序费', 'in_header': 'get_inboundbuyer_contract_supplier_seq_cost',
+             'model_name': 'inboundbuyer', 'field_name': 'contract_supplier_seq_cost', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块地址/FU提供的原始地址信息', 'in_header': 'get_inboundaddress_fu_address',
+             'model_name': 'inboundaddress', 'field_name': 'fu_address', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块地址/MR取货地址', 'in_header': 'get_inboundaddress_mr_address',
+             'model_name': 'inboundaddress', 'field_name': 'mr_address', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '国产/进口/自制', 'in_header': 'get_inboundaddress_property',
+             'model_name': 'inboundaddress', 'field_name': 'property', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': '最终地址梳理/区域划分', 'in_header': 'get_inboundaddress_region_division',
+             'model_name': 'inboundaddress', 'field_name': 'region_division', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终地址梳理/国家', 'in_header': 'get_inboundaddress_country',
+             'model_name': 'inboundaddress', 'field_name': 'country', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终地址梳理/省', 'in_header': 'get_inboundaddress_province',
+             'model_name': 'inboundaddress', 'field_name': 'province', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终地址梳理/市', 'in_header': 'get_inboundaddress_city',
+             'model_name': 'inboundaddress', 'field_name': 'city', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终地址梳理/生产地址', 'in_header': 'get_inboundaddress_mfg_location',
+             'model_name': 'inboundaddress', 'field_name': 'mfg_location', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运输距离-至生产厂区', 'in_header': 'get_inboundaddress_distance_to_sgm_plant',
+             'model_name': 'inboundaddress', 'field_name': 'distance_to_sgm_plant', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运输距离-金桥C类', 'in_header': 'get_inboundaddress_distance_to_shanghai_cc',
+             'model_name': 'inboundaddress', 'field_name': 'distance_to_shanghai_cc', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '中转库地址', 'in_header': 'get_inboundaddress_warehouse_address',
+             'model_name': 'inboundaddress', 'field_name': 'warehouse_address', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '中转库运输距离', 'in_header': 'get_inboundaddress_warehouse_to_sgm_plant',
+             'model_name': 'inboundaddress', 'field_name': 'warehouse_to_sgm_plant', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块模式/海运FCL/海运LCL/空运',
+             'in_header': 'get_inboundoperationalmode_ckd_logistics_mode', 'model_name': 'inboundoperationalmode',
+             'field_name': 'ckd_logistics_mode', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块模式/规划模式（A/B/C/自制/进口）',
+             'in_header': 'get_inboundoperationalmode_planned_logistics_mode', 'model_name': 'inboundoperationalmode',
+             'field_name': 'planned_logistics_mode', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块模式/是否供应商排序(JIT)',
+             'in_header': 'get_inboundoperationalmode_if_supplier_seq', 'model_name': 'inboundoperationalmode',
+             'field_name': 'if_supplier_seq', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块模式/结费模式（2A/2B）以此为准',
+             'in_header': 'get_inboundoperationalmode_payment_mode', 'model_name': 'inboundoperationalmode',
+             'field_name': 'payment_mode', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终模式/运输条款', 'in_header': 'get_inboundmode_logistics_incoterm_mode',
+             'model_name': 'inboundmode', 'field_name': 'logistics_incoterm_mode', 'skip': False,
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': '最终模式/入厂物流模式', 'in_header': 'get_inboundmode_operation_mode',
+             'model_name': 'inboundmode', 'field_name': 'operation_mode', 'skip': False, 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装PK NAME', 'in_header': 'get_inboundtcspackage_supplier_pkg_name',
+             'model_name': 'inboundtcspackage', 'field_name': 'supplier_pkg_name', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装PKPCS', 'in_header': 'get_inboundtcspackage_supplier_pkg_pcs',
+             'model_name': 'inboundtcspackage', 'field_name': 'supplier_pkg_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装PL', 'in_header': 'get_inboundtcspackage_supplier_pkg_length',
+             'model_name': 'inboundtcspackage', 'field_name': 'supplier_pkg_length', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装PW', 'in_header': 'get_inboundtcspackage_supplier_pkg_width',
+             'model_name': 'inboundtcspackage', 'field_name': 'supplier_pkg_width', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装PH', 'in_header': 'get_inboundtcspackage_supplier_pkg_height',
+             'model_name': 'inboundtcspackage', 'field_name': 'supplier_pkg_height', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装折叠率',
+             'in_header': 'get_inboundtcspackage_supplier_pkg_folding_rate', 'model_name': 'inboundtcspackage',
+             'field_name': 'supplier_pkg_folding_rate', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装CUBIC/PCS',
+             'in_header': 'get_inboundtcspackage_supplier_pkg_cubic_pcs', 'model_name': 'inboundtcspackage',
+             'field_name': 'supplier_pkg_cubic_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/供应商出厂包装CUBIC/VEH',
+             'in_header': 'get_inboundtcspackage_supplier_pkg_cubic_veh', 'model_name': 'inboundtcspackage',
+             'field_name': 'supplier_pkg_cubic_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装PK NAME', 'in_header': 'get_inboundtcspackage_sgm_pkg_name',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装PKPCS', 'in_header': 'get_inboundtcspackage_sgm_pkg_pcs',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装PL', 'in_header': 'get_inboundtcspackage_sgm_pkg_length',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_length', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装PW', 'in_header': 'get_inboundtcspackage_sgm_pkg_width',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_width', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装PH', 'in_header': 'get_inboundtcspackage_sgm_pkg_height',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_height', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'TCS包装/先期规划包装折叠率', 'in_header': 'get_inboundtcspackage_sgm_pkg_folding_rate',
+             'model_name': 'inboundtcspackage', 'field_name': 'sgm_pkg_folding_rate', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装PK NAME',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_name', 'model_name': 'inboundoperationalpackage',
+             'field_name': 'supplier_pkg_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装PKPCS',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_pcs', 'model_name': 'inboundoperationalpackage',
+             'field_name': 'supplier_pkg_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装PL',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_length',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'supplier_pkg_length', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装PW',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_width', 'model_name': 'inboundoperationalpackage',
+             'field_name': 'supplier_pkg_width', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装PH',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_height',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'supplier_pkg_height', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/供应商包装折叠率',
+             'in_header': 'get_inboundoperationalpackage_supplier_pkg_folding_rate',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'supplier_pkg_folding_rate', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装PK NAME',
+             'in_header': 'get_inboundoperationalpackage_sgm_pkg_name', 'model_name': 'inboundoperationalpackage',
+             'field_name': 'sgm_pkg_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装PKPCS', 'in_header': 'get_inboundoperationalpackage_sgm_pkg_pcs',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'sgm_pkg_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装PL', 'in_header': 'get_inboundoperationalpackage_sgm_pkg_length',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'sgm_pkg_length', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装PW', 'in_header': 'get_inboundoperationalpackage_sgm_pkg_width',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'sgm_pkg_width', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装PH', 'in_header': 'get_inboundoperationalpackage_sgm_pkg_height',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'sgm_pkg_height', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '运作功能块包装/SGM包装折叠率',
+             'in_header': 'get_inboundoperationalpackage_sgm_pkg_folding_rate',
+             'model_name': 'inboundoperationalpackage', 'field_name': 'sgm_pkg_folding_rate', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装PK NAME', 'in_header': 'get_inboundpackage_supplier_pkg_name',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装PKPCS', 'in_header': 'get_inboundpackage_supplier_pkg_pcs',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装PL', 'in_header': 'get_inboundpackage_supplier_pkg_length',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_length', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装PW', 'in_header': 'get_inboundpackage_supplier_pkg_width',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_width', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装PH', 'in_header': 'get_inboundpackage_supplier_pkg_height',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_height', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装折叠率', 'in_header': 'get_inboundpackage_supplier_pkg_folding_rate',
+             'model_name': 'inboundpackage', 'field_name': 'supplier_pkg_folding_rate', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装CUBIC/PCS',
+             'in_header': 'get_inboundpackage_supplier_pkg_cubic_pcs', 'model_name': 'inboundpackage',
+             'field_name': 'supplier_pkg_cubic_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/供应商包装CUBIC/VEH',
+             'in_header': 'get_inboundpackage_supplier_pkg_cubic_veh', 'model_name': 'inboundpackage',
+             'field_name': 'supplier_pkg_cubic_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装PK NAME', 'in_header': 'get_inboundpackage_sgm_pkg_name',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_name', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装PKPCS', 'in_header': 'get_inboundpackage_sgm_pkg_pcs',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装PL', 'in_header': 'get_inboundpackage_sgm_pkg_length',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_length', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装PW', 'in_header': 'get_inboundpackage_sgm_pkg_width',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_width', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装PH', 'in_header': 'get_inboundpackage_sgm_pkg_height',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_height', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装折叠率', 'in_header': 'get_inboundpackage_sgm_pkg_folding_rate',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_folding_rate', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装CUBIC/PCS', 'in_header': 'get_inboundpackage_sgm_pkg_cubic_pcs',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_cubic_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/SGM包装CUBIC/VEH', 'in_header': 'get_inboundpackage_sgm_pkg_cubic_veh',
+             'model_name': 'inboundpackage', 'field_name': 'sgm_pkg_cubic_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '最终包装信息/体积放大系数', 'in_header': 'get_inboundpackage_cubic_matrix',
+             'model_name': 'inboundpackage', 'field_name': 'cubic_matrix', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/DDP运费/PCS', 'in_header': 'get_inboundcalculation_ddp_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'ddp_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/干线去程/PCS', 'in_header': 'get_inboundcalculation_linehaul_oneway_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_oneway_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/干线VMI/PCS', 'in_header': 'get_inboundcalculation_linehaul_vmi_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_vmi_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/干线返程/PCS', 'in_header': 'get_inboundcalculation_linehaul_backway_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_backway_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内陆运/PCS', 'in_header': 'get_inboundcalculation_dom_truck_ttl_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_truck_ttl_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内水运-去程/PCS', 'in_header': 'get_inboundcalculation_dom_water_oneway_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_water_oneway_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内CC操作费/PCS', 'in_header': 'get_inboundcalculation_dom_cc_operation_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_cc_operation_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内水运-返程/PCS', 'in_header': 'get_inboundcalculation_dom_water_backway_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_water_backway_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内水运/PCS', 'in_header': 'get_inboundcalculation_dom_water_ttl_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_water_ttl_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/海外段内陆运输/PCS', 'in_header': 'get_inboundcalculation_oversea_inland_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_inland_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/海外CC操作费/PCS', 'in_header': 'get_inboundcalculation_oversea_cc_op_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_cc_op_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国际海运费/PCS', 'in_header': 'get_inboundcalculation_international_ocean_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'international_ocean_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/国内拉动费/PCS', 'in_header': 'get_inboundcalculation_dom_pull_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_pull_pcs', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单证费/PCS', 'in_header': 'get_inboundcalculation_certificate_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'certificate_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/进口海运/PCS', 'in_header': 'get_inboundcalculation_oversea_ocean_ttl_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_ocean_ttl_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/进口空运/PCS', 'in_header': 'get_inboundcalculation_oversea_air_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_air_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/IB COST', 'in_header': 'get_inboundcalculation_inbound_ttl_pcs',
+             'model_name': 'inboundcalculation', 'field_name': 'inbound_ttl_pcs', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 DDP运费/VEH', 'in_header': 'get_inboundcalculation_ddp_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'ddp_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 干线去程/VEH', 'in_header': 'get_inboundcalculation_linehaul_oneway_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_oneway_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 干线VMI/VEH', 'in_header': 'get_inboundcalculation_linehaul_vmi_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_vmi_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 干线返程/VEH', 'in_header': 'get_inboundcalculation_linehaul_backway_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'linehaul_backway_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内陆运/VEH', 'in_header': 'get_inboundcalculation_dom_truck_ttl_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_truck_ttl_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内海运-去程/VEH',
+             'in_header': 'get_inboundcalculation_dom_water_oneway_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'dom_water_oneway_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内CC操作费/VEH',
+             'in_header': 'get_inboundcalculation_dom_cc_operation_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'dom_cc_operation_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内海运-返程/VEH',
+             'in_header': 'get_inboundcalculation_dom_water_backway_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'dom_water_backway_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内海运/VEH', 'in_header': 'get_inboundcalculation_dom_water_ttl_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_water_ttl_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 海外段内陆运输/VEH',
+             'in_header': 'get_inboundcalculation_oversea_inland_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'oversea_inland_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 海外CC操作费/VEH', 'in_header': 'get_inboundcalculation_oversea_cc_op_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_cc_op_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国际海运费/VEH',
+             'in_header': 'get_inboundcalculation_international_ocean_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'international_ocean_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 国内拉动费/VEH', 'in_header': 'get_inboundcalculation_dom_pull_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'dom_pull_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 单证费/VEH', 'in_header': 'get_inboundcalculation_certificate_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'certificate_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 进口海运/VEH',
+             'in_header': 'get_inboundcalculation_oversea_ocean_ttl_veh', 'model_name': 'inboundcalculation',
+             'field_name': 'oversea_ocean_ttl_veh', 'skip': False, 'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 进口空运/VEH', 'in_header': 'get_inboundcalculation_oversea_air_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'oversea_air_veh', 'skip': False,
+             'match_display': False},
+            {'r_offset': 0, 'ex_header': '计算/单车费用 TTL IB COST', 'in_header': 'get_inboundcalculation_inbound_ttl_veh',
+             'model_name': 'inboundcalculation', 'field_name': 'inbound_ttl_veh', 'skip': False, 'match_display': False}
+        ]
+
+        # cursor
+        for i in range(len(matrix)):
+            all_header_found = True
+
+            # all header field found
+            for dict_obj in WIDE_HEADER:
+                if 'col' not in dict_obj:
+                    all_header_found = False
+                    break
+
+            if all_header_found:
+                break
+
+            row = matrix[i]
+
+            for j in range(len(row)):
+                cell = str(row[j])
+
+                for k in range(len(WIDE_HEADER)):
+                    if cell.strip().upper() == WIDE_HEADER[k]['ex_header']:
+                        WIDE_HEADER[k]['col'] = j
+                        WIDE_HEADER[k]['row'] = i
+
+        # check header row
+        data_row = None
+
+        for dict_obj in WIDE_HEADER:
+            if 'col' not in dict_obj or 'row' not in dict_obj:
+                raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
+            else:
+                if data_row is not None:
+                    if dict_obj['row'] - dict_obj['r_offset'] != data_row:
+                        raise Http404('Excel 格式不正确.')
+                else:
+                    data_row = dict_obj['row'] + dict_obj['r_offset']
+
+        # start parsing row
+        start_row = data_row + 1
+
+        # look up field
+        lookup_col = None
+
+        for dict_obj in WIDE_HEADER:
+            if dict_obj['in_header'].upper() == 'part_number'.upper():
+                lookup_col = dict_obj['col']
+                break
+
+        assert lookup_col
+
+        # params context
+        model_params = dict()
+
+        for dict_obj in WIDE_HEADER:
+            if dict_obj['model_name'] not in model_params:
+                model_params[dict_obj['model_name']] = dict()
+
+        print(model_params)
+
+        # parse list of list
+        for row in matrix[start_row:]:
+            lookup_value = row[lookup_col]
+
+            # if no actual value
+            if lookup_value == '':
+                continue
+
+            # parse row cells
+            model_params_instance = model_params
+
+            for dict_obj in WIDE_HEADER:
+                if not dict_obj['skip'] and dict_obj['col'] != lookup_col:
+
+                    if not dict_obj['match_display']:
+                        model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = row[dict_obj['col']]
+
+                    else:
+                        choice = getattr(
+                            apps.get_model('costsummary', dict_obj['model_name']),
+                            dict_obj['field_name'] + '_choice'
+                        )
+
+                        for int_val, str_val in choice:
+                            if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = int_val
+                                break
+
+            # match ebom object
+            ebom_objects = models.Ebom.objects.filter(part_number=lookup_value)
+
+            if not ebom_objects:
+                new_ebom_object = models.Ebom(
+                    label=None,
+                    part_number=lookup_value
+                )
+                new_ebom_object.save()
+
+                ebom_objects = [new_ebom_object]
+
+            # save ebom object and related objects
+            for ebom_object in ebom_objects:
+
+                # ebom object
+                native_params = model_params_instance['ebom']
+                model_params_instance.pop('ebom')
+
+                for attribute in native_params:
+                    if native_params[attribute] == '':
+                        native_params[attribute] = None
+                    setattr(ebom_object, attribute, native_params[attribute])
+
+                ebom_object.save()
+
+                # related object
 
 
 @admin.register(models.Constants)
