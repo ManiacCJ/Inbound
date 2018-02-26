@@ -1,0 +1,52 @@
+from_to,from,to,standard,danger
+1,Lake Orion,JQ,1342,1880
+1,Laredo,JQ,1677,1936
+1,EUCC,JQ,562.6,640.2
+1,KRCC,JQ,200,400
+1,Mexico,JQ,1340,2643
+1,Lake Orion,NS,1342,1880
+1,Laredo,NS,1677,1936
+1,EUCC,NS,562.6,640.2
+1,KRCC,NS,142,170
+1,Mexico,NS,1340,2643
+1,Lake Orion,DY,1342,1880
+1,Laredo,DY,1677,1936
+1,EUCC,DY,562.6,640.2
+1,KRCC,DY,85,102
+1,Mexico,DY,1340,2643
+1,Lake Orion,WH,1342,1880
+1,Laredo,WH,1677,1936
+1,EUCC,WH,562.6,640.2
+1,KRCC,WH,200,400
+1,Mexico,WH,1340,2643
+2,Long Beach,JQ,1128,1916
+2,Manzanillo,JQ,1602,1916
+2,Hamburg,JQ,392.85,543.2
+2,Incheon,JQ,423,846
+2,Long Beach,NS,1207,2009
+2,Manzanillo,NS,,
+2,Hamburg,NS,442.32,613.04
+2,Incheon,NS,770,1540
+2,Long Beach,DY,1446,2092
+2,Manzanillo,DY,,
+2,Hamburg,DY,677.06,971.94
+2,Incheon,DY,752,1504
+2,Long Beach,WH,,
+2,Manzanillo,WH,,
+2,Hamburg,WH,,
+2,Incheon,WH,,
+3,NACC,Shanghai,1165,2155
+3,NACC,Yangshan,1384,2155
+3,NACC,Yantai,1629,1629
+3,NACC,Yingkou,,
+3,NACC,Dalian,4331,4922
+3,KRCC,Shanghai,1165,2155
+3,KRCC,Yangshan,1384,2155
+3,KRCC,Yantai,2140,4280
+3,KRCC,Yingkou,3344,6688
+3,KRCC,Dalian,,
+3,EUCC,Shanghai,1165,2155
+3,EUCC,Yangshan,1384,2155
+3,EUCC,Yantai,1629,1629
+3,EUCC,Yingkou,,
+3,EUCC,Dalian,4331,4922

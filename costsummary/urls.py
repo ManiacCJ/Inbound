@@ -10,6 +10,7 @@ urlpatterns = [
     url(r'^initialize/supplier', views.initialize_data, {'data': 'supplier'}),
     url(r'^initialize/osrate', views.initialize_data, {'data': 'osrate'}),
     url(r'^initialize/cclocation', views.initialize_data, {'data': 'cclocation'}),
+    url(r'^initialize/ccdanger', views.initialize_data, {'data': 'ccdanger'}),
 
     url(r'^dsl/foreign-fields', views.dsl_list_display_foreign_fields),
     url(r'^dsl/wide-schema', views.dsl_parse_wide_schema),

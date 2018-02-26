@@ -196,9 +196,10 @@ class InitializeData:
                 if index >= 0:  # skip header
                     cc_group = int(row[0].strip())
                     cn_location_name = row[1].strip()
-                    en_location_name = row[2].strip()
+                    en_location_name = row[2].strip().upper()
                     currency_unit = int(row[3].strip())
                     per_cbm = float(row[4].strip()) if row[4].strip() else None
+                    cc = row[5].strip().upper()
 
                     try:
                         c = models.InboundCcLocations(
@@ -206,7 +207,8 @@ class InitializeData:
                             cn_location_name=cn_location_name,
                             en_location_name=en_location_name,
                             currency_unit=currency_unit,
-                            per_cbm=per_cbm
+                            per_cbm=per_cbm,
+                            cc=cc
                         )
 
                         # save models
@@ -216,6 +218,46 @@ class InitializeData:
                     except (IntegrityError, ValidationError) as e:
                         print(e)
                         continue
+
+                # print(index)
+                index += 1
+
+            # return loaded row number
+            return index
+
+    @staticmethod
+    def load_initial_cc_danger(in_file='TEC/cc-danger.csv'):
+        """ Load cc location. """
+        print("Start loading...")
+
+        # delete existed objects
+        models.InboundDangerPackage.objects.all().delete()
+
+        # find csv file path
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index > 0:  # skip header
+                    from_to_type = int(row[0].strip())
+                    from_one = row[1].strip().upper()
+                    to_one = row[2].strip().upper()
+                    standard = float(row[3].strip()) if row[3].strip() else None
+                    danger = float(row[4].strip()) if row[4].strip() else None
+
+                    d = models.InboundDangerPackage(
+                        from_to_type=from_to_type,
+                        from_one=from_one,
+                        to_one=to_one,
+                        standard=standard,
+                        danger=danger,
+                    )
+
+                    # save models
+                    d.save()
 
                 # print(index)
                 index += 1

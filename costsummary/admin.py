@@ -2688,11 +2688,41 @@ class InboundCcLocationsAdmin(admin.ModelAdmin):
         'cn_location_name',
         'en_location_name',
         'currency_unit',
-        'per_cbm'
+        'per_cbm',
+        'cc'
     )
 
     search_fields = [
         'cc_group',
         'cn_location_name',
         'en_location_name',
+        'cc'
     ]
+
+
+@admin.register(models.InboundCcOperation)
+class InboundCcOperationAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'cc',
+        'cbm_in_usd',
+        'load_ratio',
+    )
+
+
+@admin.register(models.InboundDangerPackage)
+class InboundCcDangerAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'from_to_type',
+        'from_one',
+        'to_one',
+        'standard',
+        'danger',
+    )
+
+    list_filter = (
+        'from_to_type',
+        'from_one',
+        'to_one'
+    )

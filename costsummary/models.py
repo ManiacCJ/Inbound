@@ -677,6 +677,7 @@ class InboundCcLocations(models.Model):
     currency_unit_choice = ((1, '$'), (2, '€'))
     currency_unit = models.IntegerField(choices=currency_unit_choice, verbose_name='货币单位')
     per_cbm = models.FloatField(null=True, blank=True)
+    cc = models.CharField(max_length=64, verbose_name='CC')
 
     class Meta:
         verbose_name = '进口 CC Pickup Location'
@@ -684,6 +685,37 @@ class InboundCcLocations(models.Model):
 
     def __str__(self):
         return self.cn_location_name
+
+
+class InboundCcOperation(models.Model):
+    """ CC Operation cost. """
+    cc = models.CharField(max_length=64, verbose_name='CC')
+    cbm_in_usd = models.FloatField(verbose_name='USD/CBM')
+    load_ratio = models.FloatField(verbose_name='装载率')
+
+    class Meta:
+        verbose_name = '进口 CC操作'
+        verbose_name_plural = '进口 CC操作'
+
+    def __str__(self):
+        return self.cc
+
+
+class InboundDangerPackage(models.Model):
+    """ Danger package rate. """
+    from_to_type_choice = ((1, 'CCto出口港'), (2, '出口港to目的港'), (3, '目的港toSGM'))
+    from_to_type = models.IntegerField(choices=from_to_type_choice)
+    from_one = models.CharField(max_length=64, verbose_name='from')
+    to_one = models.CharField(max_length=64, verbose_name='to')
+    standard = models.FloatField(null=True, blank=True, verbose_name='普货')
+    danger = models.FloatField(null=True, blank=True, verbose_name='危险品')
+
+    class Meta:
+        verbose_name = '进口 危险品费率'
+        verbose_name_plural = '进口 危险品费率'
+
+    def __str__(self):
+        return f'{self.from_one} -> {self.to_one}'
 
 
 class InboundCalculation(models.Model):
