@@ -96,6 +96,88 @@ class InitializeData:
             return index
 
     @staticmethod
+    def load_initial_os_rate(in_file='TEC/os-rate.csv'):
+        """ Load initial oversea rate. """
+        print("Start loading...")
+
+        # delete existed objects
+        models.InboundOverseaRate.objects.all().delete()
+
+        # find csv file path
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # reverse mapping of base
+            REV_BASE_CHOICE = dict()
+            for _i, _s in models.BASE_CHOICE:
+                if _i >= 0:  # exclude 3rd party
+                    REV_BASE_CHOICE[_s] = _i
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index >= 0:  # no header
+                    region = row[0].strip().upper()
+                    base = REV_BASE_CHOICE[row[1].strip().upper()]
+                    cc = row[2].strip().upper()
+                    export_harbor = row[3].strip().upper()
+                    definition_harbor = row[4].strip().upper()
+                    os_dm_rate = float(row[5].strip()) if row[5].strip() else None
+                    cc_rate = float(row[6].strip()) if row[6].strip() else None
+                    euro_doc_rate = float(row[7].strip()) if row[7].strip() else None
+                    os_40h_rate = float(row[8].strip()) if row[8].strip() else None
+                    os_40h_danger_rate = float(row[9].strip()) if row[9].strip() else None
+                    inter_40h_rate = float(row[10].strip()) if row[10].strip() else None
+                    inter_40h_danger_rate = float(row[11].strip()) if row[11].strip() else None
+                    dm_40h_rate = float(row[12].strip()) if row[12].strip() else None
+                    dm_40h_danger_rate = float(row[13].strip()) if row[13].strip() else None
+                    delegate = float(row[14].strip()) if row[14].strip() else None
+                    delegate_danger = float(row[15].strip()) if row[15].strip() else None
+                    vol_40h = float(row[16].strip()) if row[16].strip() else None
+                    load_rate = float(row[17].strip()) if row[17].strip() else None
+                    cpc = float(row[18].strip()) if row[18].strip() else None
+                    cpc_danger = float(row[19].strip()) if row[19].strip() else None
+
+                    try:
+                        i = models.InboundOverseaRate(
+                            region=region,
+                            base=base,
+                            cc=cc,
+                            export_harbor=export_harbor,
+                            definition_harbor=definition_harbor,
+                            os_dm_rate=os_dm_rate,
+                            cc_rate=cc_rate,
+                            euro_doc_rate=euro_doc_rate,
+                            os_40h_rate=os_40h_rate,
+                            os_40h_danger_rate=os_40h_danger_rate,
+                            inter_40h_rate=inter_40h_rate,
+                            inter_40h_danger_rate=inter_40h_danger_rate,
+                            dm_40h_rate=dm_40h_rate,
+                            dm_40h_danger_rate=dm_40h_danger_rate,
+                            delegate=delegate,
+                            delegate_danger=delegate_danger,
+                            vol_40h=vol_40h,
+                            load_rate=load_rate,
+                            cpc=cpc,
+                            cpc_danger=cpc_danger,
+                        )
+
+                        # save models
+                        i.save()
+
+                    # unique constraints not meet
+                    except (IntegrityError, ValidationError) as e:
+                        print(e)
+                        continue
+
+                # print(index)
+                index += 1
+
+            # return loaded row number
+            return index
+
+    @staticmethod
     def load_initial_distance(in_file='supplier/supplier-distance-new.csv'):
         print("Start loading...")
 

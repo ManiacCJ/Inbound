@@ -30,6 +30,9 @@ def initialize_data(request, data):
     elif data == 'supplier':
         row_count = InitializeData.load_initial_distance()
 
+    elif data == 'osrate':
+        row_count = InitializeData.load_initial_os_rate()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 

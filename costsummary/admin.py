@@ -2645,3 +2645,36 @@ class ConstantsAdmin(admin.ModelAdmin):
     search_fields = [
         'constant_key'
     ]
+
+
+@admin.register(models.InboundOverseaRate)
+class InboundOverseaRateAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'region',
+        'base',
+        'cc',
+        'export_harbor',
+        'definition_harbor',
+        'os_dm_rate',
+        'cc_rate',
+        'euro_doc_rate',
+        'os_40h_rate',
+        'os_40h_danger_rate',
+        'inter_40h_rate',
+        'inter_40h_danger_rate',
+        'dm_40h_rate',
+        'dm_40h_danger_rate',
+        'delegate',
+        'delegate_danger',
+        'vol_40h',
+        'load_rate',
+        'cpc',
+        'cpc_danger',
+    )
+
+    search_fields = [
+        'region',
+        'base',
+        'cc',
+    ]

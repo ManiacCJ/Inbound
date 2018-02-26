@@ -635,6 +635,38 @@ class Constants(models.Model):
         return self.constant_key
 
 
+class InboundOverseaRate(models.Model):
+    """ Oversea rate. """
+    region = models.CharField(max_length=64, verbose_name='区域')
+    base = models.IntegerField(verbose_name='基地', choices=BASE_CHOICE)
+    cc = models.CharField(max_length=64, verbose_name='CC')
+    export_harbor = models.CharField(max_length=64, verbose_name='出口港')
+    definition_harbor = models.CharField(max_length=64, verbose_name='目的港')
+
+    os_dm_rate = models.FloatField(null=True, blank=True, verbose_name='海外段内陆运输单价')
+    cc_rate = models.FloatField(null=True, blank=True, verbose_name='CC操作单价')
+    euro_doc_rate = models.FloatField(null=True, blank=True, verbose_name='欧洲单证费')
+    os_40h_rate = models.FloatField(null=True, blank=True, verbose_name='海外港口拉动 40H\'单箱价格')
+    os_40h_danger_rate = models.FloatField(null=True, blank=True, verbose_name='海外港口拉动 40H\'单箱价格（危险）')
+    inter_40h_rate = models.FloatField(null=True, blank=True, verbose_name='国际海运 40H\'单箱价格')
+    inter_40h_danger_rate = models.FloatField(null=True, blank=True, verbose_name='国际海运 40H\'单箱价格（危险）')
+    dm_40h_rate = models.FloatField(null=True, blank=True, verbose_name='国内拉动 40H\'单箱价格')
+    dm_40h_danger_rate = models.FloatField(null=True, blank=True, verbose_name='国内拉动 40H\'单箱价格（危险）')
+    delegate = models.FloatField(null=True, blank=True, verbose_name='代收代付')
+    delegate_danger = models.FloatField(null=True, blank=True, verbose_name='代收代付（危险）')
+    vol_40h = models.FloatField(null=True, blank=True, verbose_name='40H\'集箱容积')
+    load_rate = models.FloatField(null=True, blank=True, verbose_name='装载率')
+    cpc = models.FloatField(null=True, blank=True, verbose_name='CPC')
+    cpc_danger = models.FloatField(null=True, blank=True, verbose_name='CPC（危险）')
+
+    class Meta:
+        verbose_name = '进口费率'
+        verbose_name_plural = '进口费率'
+
+    def __str__(self):
+        return f'{self.region}/{self.get_base_display()}/{self.cc}'
+
+
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
