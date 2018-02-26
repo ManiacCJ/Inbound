@@ -667,6 +667,25 @@ class InboundOverseaRate(models.Model):
         return f'{self.region}/{self.get_base_display()}/{self.cc}'
 
 
+class InboundCcLocations(models.Model):
+    """ CC & locations."""
+    cc_group_choice = ((1, 'KRCC'), (2, 'NACC'), (3, 'EUCC'))
+    cc_group = models.IntegerField(choices=cc_group_choice)
+    cn_location_name = models.CharField(max_length=64, verbose_name='中文名称')
+    en_location_name = models.CharField(max_length=64, verbose_name='英文名称')
+
+    currency_unit_choice = ((1, '$'), (2, '€'))
+    currency_unit = models.IntegerField(choices=currency_unit_choice, verbose_name='货币单位')
+    per_cbm = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = '进口 CC Pickup Location'
+        verbose_name_plural = '进口 CC Pickup Location'
+
+    def __str__(self):
+        return self.cn_location_name
+
+
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')

@@ -2678,3 +2678,21 @@ class InboundOverseaRateAdmin(admin.ModelAdmin):
         'base',
         'cc',
     ]
+
+
+@admin.register(models.InboundCcLocations)
+class InboundCcLocationsAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'cc_group',
+        'cn_location_name',
+        'en_location_name',
+        'currency_unit',
+        'per_cbm'
+    )
+
+    search_fields = [
+        'cc_group',
+        'cn_location_name',
+        'en_location_name',
+    ]

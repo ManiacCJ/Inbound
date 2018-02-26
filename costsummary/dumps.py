@@ -178,6 +178,52 @@ class InitializeData:
             return index
 
     @staticmethod
+    def load_initial_cc_location(in_file='TEC/cc-locations.csv'):
+        """ Load cc location. """
+        print("Start loading...")
+
+        # delete existed objects
+        models.InboundCcLocations.objects.all().delete()
+
+        # find csv file path
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index >= 0:  # skip header
+                    cc_group = int(row[0].strip())
+                    cn_location_name = row[1].strip()
+                    en_location_name = row[2].strip()
+                    currency_unit = int(row[3].strip())
+                    per_cbm = float(row[4].strip()) if row[4].strip() else None
+
+                    try:
+                        c = models.InboundCcLocations(
+                            cc_group=cc_group,
+                            cn_location_name=cn_location_name,
+                            en_location_name=en_location_name,
+                            currency_unit=currency_unit,
+                            per_cbm=per_cbm
+                        )
+
+                        # save models
+                        c.save()
+
+                    # unique constraints not meet
+                    except (IntegrityError, ValidationError) as e:
+                        print(e)
+                        continue
+
+                # print(index)
+                index += 1
+
+            # return loaded row number
+            return index
+
+    @staticmethod
     def load_initial_distance(in_file='supplier/supplier-distance-new.csv'):
         print("Start loading...")
 

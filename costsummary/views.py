@@ -33,6 +33,9 @@ def initialize_data(request, data):
     elif data == 'osrate':
         row_count = InitializeData.load_initial_os_rate()
 
+    elif data == 'cclocation':
+        row_count = InitializeData.load_initial_cc_location()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 
