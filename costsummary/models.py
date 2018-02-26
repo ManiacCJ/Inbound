@@ -718,6 +718,26 @@ class InboundDangerPackage(models.Model):
         return f'{self.from_one} -> {self.to_one}'
 
 
+class InboundCCSupplierRate(models.Model):
+    """ CC supplier rate. """
+    supplier_duns = models.CharField(max_length=64, verbose_name='Supplier Duns')
+    supplier_name = models.CharField(max_length=128, verbose_name='Supplier Name')
+    pick_up_location = models.CharField(max_length=128, verbose_name='Pick Up Locaction')
+    state = models.CharField(max_length=64, verbose_name='State')
+    city = models.CharField(max_length=64, verbose_name='City')
+    zip_code = models.CharField(max_length=64, verbose_name='ZIP CODE')
+    kilometers = models.FloatField(verbose_name='Kilometers')
+    rate = models.FloatField(verbose_name='Rate')
+    cpc = models.FloatField(verbose_name='CPC')
+
+    class Meta:
+        verbose_name = '进口 CC Suppliers'
+        verbose_name_plural = '进口 CC Suppliers'
+
+    def __str__(self):
+        return self.supplier_duns
+
+
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')

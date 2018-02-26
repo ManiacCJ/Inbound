@@ -2726,3 +2726,24 @@ class InboundCcDangerAdmin(admin.ModelAdmin):
         'from_one',
         'to_one'
     )
+
+
+@admin.register(models.InboundCCSupplierRate)
+class InboundCCSupplierRateAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'supplier_duns',
+        'supplier_name',
+        'pick_up_location',
+        'state',
+        'city',
+        'zip_code',
+        'kilometers',
+        'rate',
+        'cpc',
+    )
+
+    list_filter = (
+        'supplier_duns',
+        'supplier_name',
+    )

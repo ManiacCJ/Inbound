@@ -266,6 +266,54 @@ class InitializeData:
             return index
 
     @staticmethod
+    def load_initial_cc_supplier(in_file='TEC/cc-suppliers.csv'):
+        """ Load cc location. """
+        print("Start loading...")
+
+        # delete existed objects
+        models.InboundCCSupplierRate.objects.all().delete()
+
+        # find csv file path
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index > 0:  # skip header
+                    supplier_duns = row[0].strip()
+                    supplier_name = row[1].strip()
+                    pick_up_location = row[2].strip()
+                    state = row[3].strip()
+                    city = row[4].strip()
+                    zip_code = row[5].strip()
+                    kilometers = float(row[6].strip()) if row[6].strip() else None
+                    rate = float(row[7].strip()) if row[7].strip() else None
+                    cpc = float(row[8].strip()) if row[8].strip() else None
+
+                    s = models.InboundCCSupplierRate(
+                        supplier_duns=supplier_duns,
+                        supplier_name=supplier_name,
+                        pick_up_location=pick_up_location,
+                        state=state,
+                        city=city,
+                        zip_code=zip_code,
+                        kilometers=kilometers,
+                        rate=rate,
+                        cpc=cpc,
+                    )
+
+                    # save models
+                    s.save()
+
+                # print(index)
+                index += 1
+
+            # return loaded row number
+            return index
+
+    @staticmethod
     def load_initial_distance(in_file='supplier/supplier-distance-new.csv'):
         print("Start loading...")
 

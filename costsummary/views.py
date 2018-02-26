@@ -39,6 +39,9 @@ def initialize_data(request, data):
     elif data == 'ccdanger':
         row_count = InitializeData.load_initial_cc_danger()
 
+    elif data == 'ccsuppliers':
+        row_count = InitializeData.load_initial_cc_supplier()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 
