@@ -731,11 +731,45 @@ class InboundCCSupplierRate(models.Model):
     cpc = models.FloatField(verbose_name='CPC')
 
     class Meta:
-        verbose_name = '进口 CC Suppliers'
-        verbose_name_plural = '进口 CC Suppliers'
+        verbose_name = '进口 CC Suppliers 费率'
+        verbose_name_plural = '进口 CC Suppliers 费率'
 
     def __str__(self):
         return self.supplier_duns
+
+
+class InboundSupplierRate(models.Model):
+    """ Supplier rate. """
+    base = models.IntegerField(choices=BASE_CHOICE)
+    pickup_location = models.CharField(null=True, blank=True, max_length=128, verbose_name='取货地址')
+    duns = models.CharField(max_length=64, null=True, blank=True)
+    supplier = models.CharField(max_length=64, verbose_name='取货供应商')
+    forward_rate = models.FloatField(null=True, blank=True, verbose_name='去程运输单价 (元/立方米*公里)')
+    backward_rate = models.FloatField(null=True, blank=True, verbose_name='回程运输单价 (元/立方米*公里)')
+    manage_ratio = models.FloatField(null=True, blank=True, verbose_name='管理费用 （%）')
+    vmi_rate = models.FloatField(null=True, blank=True, verbose_name='VMI 中转库运作价格 (元/立方米)')
+    oneway_km = models.FloatField(null=True, blank=True, verbose_name='单程公里数')
+    address = models.CharField(null=True, blank=True, max_length=128, verbose_name='取货供应商')
+
+    class Meta:
+        verbose_name = '供应商 费率'
+        verbose_name_plural = '供应商 费率'
+
+    def __str__(self):
+        return self.supplier
+
+    def save(self, *args, **kwargs):
+        """ Override supplier save method. """
+        self.supplier = self.supplier.replace('（', '(').replace('）', ')')
+
+        if not self.duns:
+            s = Supplier.objects.filter(
+                models.Q(address=self.address) | models.Q(name__contains=self.supplier)
+            ).first()
+
+            if s and s.duns:
+                self.duns = s.duns
+        super().save(*args, **kwargs)
 
 
 class InboundCalculation(models.Model):

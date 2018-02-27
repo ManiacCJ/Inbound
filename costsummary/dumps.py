@@ -314,6 +314,60 @@ class InitializeData:
             return index
 
     @staticmethod
+    def load_initial_supplier_rate(in_file='TEC/supplier-rate.csv'):
+        """ Load cc location. """
+        print("Start loading...")
+
+        # delete existed objects
+        models.InboundSupplierRate.objects.all().delete()
+
+        # find csv file path
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            # reverse mapping of base
+            REV_BASE_CHOICE = dict()
+            for _i, _s in models.BASE_CHOICE:
+                if _i >= 0:  # exclude 3rd party
+                    REV_BASE_CHOICE[_s] = _i
+
+            for row in reader:
+                if index >= 0:  # skip header
+                    base = REV_BASE_CHOICE[row[0]]
+                    pickup_location = row[1].strip() if row[1].strip() else None
+                    supplier = row[2].strip() if row[2].strip() else None
+                    forward_rate = float(row[3].strip()) if row[3].strip() else None
+                    backward_rate = float(row[4].strip()) if row[4].strip() else None
+                    manage_ratio = float(row[5].strip()[: -1]) * 0.01 if row[5].strip() else None
+                    vmi_rate = float(row[6].strip()) if row[6].strip() else None
+                    oneway_km = float(row[7].strip()) if row[7].strip() else None
+                    address = row[8].strip() if row[8].strip() else None
+
+                    s = models.InboundSupplierRate(
+                        base=base,
+                        pickup_location=pickup_location,
+                        supplier=supplier,
+                        forward_rate=forward_rate,
+                        backward_rate=backward_rate,
+                        manage_ratio=manage_ratio,
+                        vmi_rate=vmi_rate,
+                        oneway_km=oneway_km,
+                        address=address
+                    )
+
+                    # save models
+                    s.save()
+
+                # print(index)
+                index += 1
+
+            # return loaded row number
+            return index
+
+    @staticmethod
     def load_initial_distance(in_file='supplier/supplier-distance-new.csv'):
         print("Start loading...")
 

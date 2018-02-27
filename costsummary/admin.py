@@ -2747,3 +2747,24 @@ class InboundCCSupplierRateAdmin(admin.ModelAdmin):
         'supplier_duns',
         'supplier_name',
     )
+
+
+@admin.register(models.InboundSupplierRate)
+class InboundSupplierRateAdmin(admin.ModelAdmin):
+    """ Oversea rate. """
+    list_display = (
+        'supplier',
+        'base',
+        'pickup_location',
+        'duns',
+        'forward_rate',
+        'backward_rate',
+        'manage_ratio',
+        'vmi_rate',
+        'oneway_km',
+        'address',
+    )
+
+    list_filter = (
+        'base',
+    )
