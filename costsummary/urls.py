@@ -13,6 +13,8 @@ urlpatterns = [
     url(r'^initialize/ccdanger', views.initialize_data, {'data': 'ccdanger'}),
     url(r'^initialize/ccsupplier', views.initialize_data, {'data': 'ccsuppliers'}),
     url(r'^initialize/ratesupplier', views.initialize_data, {'data': 'supplierrate'}),
+    url(r'^initialize/truckrate', views.initialize_data, {'data': 'truckrate'}),
+    url(r'^initialize/rrr', views.initialize_data, {'data': 'rrr'}),
 
     url(r'^dsl/foreign-fields', views.dsl_list_display_foreign_fields),
     url(r'^dsl/wide-schema', views.dsl_parse_wide_schema),

@@ -549,6 +549,139 @@ class InitializeData:
 
         return index
 
+    @staticmethod
+    def load_initial_truck_rate(in_file='TEC/truck-rate.csv'):
+        """ Load truck rate data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        models.TruckRate.objects.all().delete()
+
+        # find csv file path
+        csv_path = os.path.join(PERSISTENCE_DIR, in_file)
+
+        # reverse mapping of base
+        REV_BASE_CN_NAME_CHOICE = dict()
+        BASE_CN_NAME_ABBR = {
+            'JQ': '上海',
+            'WH': '武汉',
+            'NS': '北盛',
+            'DY': '东岳'
+        }
+
+        BASE_CHOICE = (
+            (0, 'JQ'),
+            (1, 'DY'),
+            (3, 'NS'),
+            (4, 'WH'),
+            (-1, '3rd Party')
+        )
+
+        for _i, _s in BASE_CHOICE:
+            if _i >= 0:  # exclude 3rd party
+                REV_BASE_CN_NAME_CHOICE[BASE_CN_NAME_ABBR[_s]] = _i
+
+        with open(csv_path, encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index > 0:  # skip header
+
+                    name = row[0].strip()
+                    cube = float(row[1].strip())
+                    loading_ratio = float(row[2].strip())
+                    capable_cube = float(row[3].strip())
+                    avg_speed = float(row[4].strip())
+                    load_time = float(row[5].strip())
+                    oil_price = float(row[6].strip()) if row[6] != '无' else None
+                    charter_price = float(row[7].strip()) if row[7].strip() else None
+                    overdue_price = float(row[8].strip()) if row[8].strip() else None
+                    rate_per_km = float(row[9].strip()) if row[9].strip() else None
+
+                    base = REV_BASE_CN_NAME_CHOICE[name[0: 2]]
+
+                    t = models.TruckRate(
+                        name=name,
+
+                        cube=cube,
+                        loading_ratio=loading_ratio,
+                        capable_cube=capable_cube,
+                        avg_speed=avg_speed,
+                        load_time=load_time,
+                        oil_price=oil_price,
+                        charter_price=charter_price,
+                        overdue_price=overdue_price,
+                        rate_per_km=rate_per_km,
+                        base=base
+                    )
+
+                    # save models
+                    t.save()
+
+                # print(index)
+                index += 1
+
+        return index
+
+    @staticmethod
+    def load_initial_region_route_rate(in_file='TEC/region-route-rate.csv'):
+        """ Load region/route rate data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        models.RegionRouteRate.objects.all().delete()
+
+        # find csv file path
+        csv_path = os.path.join(PERSISTENCE_DIR, in_file)
+
+        with open(csv_path, encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            BASE_CHOICE = (
+                (0, 'JQ'),
+                (1, 'DY'),
+                (3, 'NS'),
+                (4, 'WH'),
+                (-1, '3rd Party')
+            )
+
+            for row in reader:
+                if index > 0:  # skip header
+
+                    related_base = None
+                    for _i, _s in BASE_CHOICE:
+                        if row[0].strip() == _s:
+                            related_base = _i
+
+                    parent_region = row[1].strip() if row[1].strip() else None
+                    region_or_route = row[2].strip()
+                    km = float(row[3].strip())
+                    price_per_cube = float(row[4].strip())
+                    reference = row[5].strip() if row[4].strip() else None
+
+                    r = models.RegionRouteRate(
+                        related_base=related_base,
+                        region_or_route=region_or_route,
+                        parent_region=parent_region,
+                        km=km,
+                        price_per_cube=price_per_cube,
+                        reference=reference
+                    )
+
+                    # save models
+                    r.save()
+
+                # print(index)
+                index += 1
+
+        return index
+
 
 class ParseArray:
     """ Parse two-dimensional array of excel. """

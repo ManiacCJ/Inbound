@@ -45,6 +45,12 @@ def initialize_data(request, data):
     elif data == 'supplierrate':
         row_count = InitializeData.load_initial_supplier_rate()
 
+    elif data == 'truckrate':
+        row_count = InitializeData.load_initial_truck_rate()
+
+    elif data == 'rrr':
+        row_count = InitializeData.load_initial_region_route_rate()
+
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
 

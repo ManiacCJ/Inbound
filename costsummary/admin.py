@@ -2768,3 +2768,55 @@ class InboundSupplierRateAdmin(admin.ModelAdmin):
     list_filter = (
         'base',
     )
+
+
+@admin.register(models.TruckRate)
+class TruckRateAdmin(admin.ModelAdmin):
+    """ Truck rate admin class """
+    list_display = (
+        'name',
+        'cube',
+        'loading_ratio',
+        'capable_cube',
+        'avg_speed',
+        'load_time',
+        'oil_price',
+        'charter_price',
+        'overdue_price',
+        'rate_per_km'
+    )
+
+    search_fields = [
+        'name'
+    ]
+
+    list_filter = (
+        'cube',
+        'loading_ratio',
+        'capable_cube',
+        'avg_speed',
+        'load_time'
+    )
+
+
+@admin.register(models.RegionRouteRate)
+class RegionRouteRateAdmin(admin.ModelAdmin):
+    """ Region route rate admin class """
+    list_display = (
+        'region_or_route',
+        'related_base',
+        'parent_region',
+        'km',
+        'price_per_cube',
+        'reference',
+    )
+
+    search_fields = [
+        'region_or_route',
+    ]
+
+    list_filter = (
+        'related_base',
+        'parent_region',
+        'reference',
+    )
