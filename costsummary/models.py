@@ -814,7 +814,6 @@ class RegionRouteRate(models.Model):
         return self.region_or_route
 
 
-
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
@@ -1064,17 +1063,47 @@ class InboundCalculation(models.Model):
                 elif base == 4:  # WH
                     if hasattr(self.bom, 'rel_address'):
                         distance = self.bom.rel_address.distance_to_sgm_plant
+                        milkrun_manage_ratio = Constants.objects.get(
+                            constant_key='Milkrun管理费系数').constant_value_float
 
                         # cost
                         district = self.bom.rel_address.region_division
 
+                        def wh_cubic_rate(_distance):
+                            if _distance:
+                                if _distance <= 10.0:
+                                    return 3.89
+                                elif _distance <= 20:
+                                    return 6.51
+                                elif _distance <= 30:
+                                    return 11.66
+                                elif _distance <= 40:
+                                    return 16.52
+                                elif _distance <= 50:
+                                    return 23.32
+                                elif _distance <= 60:
+                                    return 27.2
+                                elif _distance <= 70:
+                                    return 36.92
+                                else:
+                                    return 47
+                            else:
+                                return None
+
                         if district and district in ['武汉园区', 'Milkrun武汉园区']:
-                            self.dom_truck_ttl_pcs = Constants.objects.get(constant_key='Milkrun武汉园区费率'
-                                                                           ).constant_value_float
+                            km_rate = Constants.objects.get(
+                                constant_key='Milkrun武汉园区费率').constant_value_float
 
                         else:
-                            truck = TruckRate.objects.get(name='武汉MR 8米卡车')
-                            self.dom_truck_ttl_pcs = distance * truck.oil_price * truck.rate_per_km * 2.0
+                            km_rate = wh_cubic_rate(distance)
+
+                        if hasattr(self.bom, 'rel_package'):
+                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
+                        else:
+                            single_part_vol = None
+
+                        if km_rate and single_part_vol:
+                            self.dom_truck_ttl_pcs = km_rate * single_part_vol * (1 + milkrun_manage_ratio)
 
             elif operation_mode == 2:  # MR C
                 if base == 0:  # JQ
