@@ -10,6 +10,7 @@ BASE_CHOICE = (
     (1, 'DY'),
     (3, 'NS'),
     (4, 'WH'),
+    (10, 'PT'),
     (-1, '3rd Party')
 )
 

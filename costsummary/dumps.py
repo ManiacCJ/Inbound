@@ -922,3 +922,93 @@ class ParseArray:
                         setattr(buyer_object, attribute, params[attribute])
 
                     buyer_object.save()
+
+    @staticmethod
+    def load_initial_unsorted_buyer(in_folder='buyer') -> int:
+        """ Load sgm plant data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        models.UnsortedInboundBuyer.objects.all().delete()
+
+        # search directory
+        search_dir = os.path.join(PERSISTENCE_DIR, in_folder)
+        # row index
+        index = 0
+
+        for file in os.listdir(search_dir):
+            with open(os.path.join(PERSISTENCE_DIR, in_folder, file), encoding='gbk') as csvfile:
+                reader = csv.reader(csvfile, delimiter=',')
+
+                for row in reader:
+                    if index > 3:  # skip header
+                        part_number = row[0].strip() if row[0].strip() else None
+                        part_name = row[1].strip() if row[1].strip() else None
+                        duns = row[2].strip() if row[2].strip() else None
+                        supplier_name = row[3].strip() if row[3].strip() else None
+                        buyer = row[5].strip() if row[5].strip() else None
+                        measure_unit = row[6].strip() if row[6].strip() else None
+                        currency_unit = row[7].strip() if row[7].strip() else None
+
+                        if row[8].strip() == '烟台东岳':
+                            area = 1
+                        elif row[8].strip() == '上海金桥':
+                            area = 0
+                        elif row[8].strip() == '沈阳北盛':
+                            area = 3
+                        elif row[8].strip() == '动力总成':
+                            area = 10
+                        else:
+                            area = -1
+
+                        inner_pkg_cost = float(row[9].strip()) if row[9].strip() else None
+                        inner_pkg_owner = row[10].strip() if row[10].strip() else None
+                        outer_pkg_cost = float(row[11].strip()) if row[11].strip() else None
+                        outer_pkg_owner = row[12].strip() if row[12].strip() else None
+                        carrier = row[13].strip() if row[13].strip() else None
+                        transport_cost = float(row[14].strip()) if row[14].strip() else None
+                        transport_mode = row[15].strip() if row[15].strip() else None
+
+                        if row[16].strip() == '0':
+                            whether_seq = False
+                        elif row[16].strip() == '1':
+                            whether_seq = True
+                        else:
+                            whether_seq = None
+
+                        seq_cost = float(row[17].strip()) if row[17].strip() else None
+                        location = row[18].strip() if row[18].strip() else None
+                        bidderlist_no = row[19].strip() if row[19].strip() else None
+                        project = row[20].strip() if row[20].strip() else None
+
+                        t = models.UnsortedInboundBuyer(
+                            part_number=part_number,
+                            part_name=part_name,
+                            duns=duns,
+                            supplier_name=supplier_name,
+                            buyer=buyer,
+                            measure_unit=measure_unit,
+                            currency_unit=currency_unit,
+                            area=area,
+                            inner_pkg_cost=inner_pkg_cost,
+                            inner_pkg_owner=inner_pkg_owner,
+                            outer_pkg_cost=outer_pkg_cost,
+                            outer_pkg_owner=outer_pkg_owner,
+                            carrier=carrier,
+                            transport_cost=transport_cost,
+                            transport_mode=transport_mode,
+                            whether_seq=whether_seq,
+                            seq_cost=seq_cost,
+                            location=location,
+                            bidderlist_no=bidderlist_no,
+                            project=project,
+                        )
+
+                        # save models
+                        t.save()
+
+                    # print(index)
+                    index += 1
+
+        # return loaded row number
+        return index
