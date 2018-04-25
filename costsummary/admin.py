@@ -292,6 +292,7 @@ class EbomAdmin(admin.ModelAdmin):
 
     list_filter = (
         'label',
+        'label__value',
     )
 
     inlines = [

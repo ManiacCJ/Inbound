@@ -102,7 +102,7 @@ class NominalLabelMapping(models.Model):
 
 class Ebom(models.Model):
     """ EBOM data. """
-    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='车型')
+    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='细分车型')
 
     # other fields
     upc = models.CharField(max_length=20, verbose_name='UPC')
@@ -818,6 +818,9 @@ class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
 
+    veh_pt_choice = ((1, 'VEH'), (2, 'PT'))
+    veh_pt = models.IntegerField(verbose_name='VEH_PT', default=1, choices=veh_pt_choice)
+
     ddp_pcs = models.FloatField(null=True, blank=True, verbose_name='DDP运费/pcs')
 
     linehaul_oneway_pcs = models.FloatField(null=True, blank=True, verbose_name='干线去程/pcs')
@@ -1147,6 +1150,8 @@ class InboundCalculation(models.Model):
                                     self.dom_truck_ttl_pcs = rate_gt_25km * single_part_vol * (
                                         1 + milkrun_manage_ratio)
 
+                if self.bom.duns:  # duns
+                    pass
 
 
 
