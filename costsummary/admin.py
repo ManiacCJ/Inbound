@@ -188,6 +188,22 @@ class InboundCalculationInline(admin.StackedInline):
     extra = 0
 
 
+class LabelValueFilter(admin.SimpleListFilter):
+    """  Filter by label value """
+    title = '车型'
+    parameter_name = 'labelvalue'
+
+    def lookups(self, request, model_admin):
+        existed_labels = models.Ebom.objects.values('label__value').distinct()
+        return [(e['label__value'], e['label__value']) for e in existed_labels]
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(label__value__exact=self.value())
+        else:
+            return queryset
+
+
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
@@ -291,8 +307,8 @@ class EbomAdmin(admin.ModelAdmin):
     ]
 
     list_filter = (
-        'label',
-        'label__value',
+        LabelValueFilter,
+        ('label', admin.RelatedOnlyFieldListFilter),
     )
 
     inlines = [
@@ -1928,7 +1944,7 @@ class EbomAdmin(admin.ModelAdmin):
     get_inboundcalculation_inbound_ttl_veh.short_description = '计算/单车费用 TTL IB Cost'
 
 
-@admin.register(models.AEbomEntry)
+# @admin.register(models.AEbomEntry)
 class AEbomEntryAdmin(admin.ModelAdmin):
     """ EBOM entry admin. """
     list_display = (
