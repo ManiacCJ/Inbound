@@ -604,6 +604,8 @@ class UploadHandler(models.Model):
     file_to_be_uploaded = models.FileField(null=True, blank=True)
     upload_time = models.DateTimeField(auto_now=True, editable=False)
 
+    label = models.ForeignKey(NominalLabelMapping, null=True, blank=True, default=None, on_delete=models.CASCADE, verbose_name='车型')
+
     class Meta:
         verbose_name = '上传文件暂存'
         verbose_name_plural = '上传文件暂存'

@@ -2122,17 +2122,41 @@ class AEbomEntryAdmin(admin.ModelAdmin):
     actions = ['load']
 
 
+class UploadForm(ModelForm):
+    """ Upload handler form. """
+    def clean(self):
+        """ custom validator """
+        cleaned_data = super().clean()
+
+        model_name = cleaned_data.get("model_name")
+        label = cleaned_data.get("label")
+
+        if model_name == 999 and label is None:
+            self.add_error('label', "请指定一个车型!")
+
+
 @admin.register(models.UploadHandler)
 class UploadHandlerAdmin(admin.ModelAdmin):
     """ Upload handler admin. """
+    form = UploadForm
+
     list_display = [
         'model_name',
         'upload_time'
     ]
 
+    def get_fields(self, request, obj=None):
+        """ If upload wide table, show label. """
+        model_name = request.GET.get('model_name')
+        fields = super().get_fields(request)
+
+        if model_name != '999':
+            fields.remove('label')
+
+        return fields
+
     def get_readonly_fields(self, request, obj=None):
         """ Read-only fields according to request. """
-        print(request.GET)
         model_name = request.GET.get('model_name')
 
         if model_name == '1':
