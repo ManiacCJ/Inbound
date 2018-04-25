@@ -2861,3 +2861,39 @@ class RegionRouteRateAdmin(admin.ModelAdmin):
         'parent_region',
         'reference',
     )
+
+
+@admin.register(models.UnsortedInboundBuyer)
+class UnsortedInboundBuyer(admin.ModelAdmin):
+    list_display = (
+        'part_number',
+        'part_name',
+        'duns',
+        'supplier_name',
+        'buyer',
+        'measure_unit',
+        'currency_unit',
+        'area',
+        'inner_pkg_cost',
+        'inner_pkg_owner',
+        'outer_pkg_cost',
+        'outer_pkg_owner',
+        'carrier',
+        'transport_cost',
+        'transport_mode',
+        'whether_seq',
+        'seq_cost',
+        'location',
+        'bidderlist_no',
+        'project',
+    )
+
+    search_fields = [
+        'part_number',
+        'duns',
+        'buyer',
+    ]
+
+    list_filter = [
+        'area',
+    ]

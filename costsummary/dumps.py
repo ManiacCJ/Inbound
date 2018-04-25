@@ -838,7 +838,7 @@ class ParseArray:
         BUYER_HEADER = [
             {'r_offset': 0, 'ex_header': '零件号', 'in_header': 'bom:part_number'},
             {'r_offset': 0, 'ex_header': '采购员', 'in_header': 'buyer'},
-            {'r_offset': 0, 'ex_header': '计量单位', 'in_header': 'contract_incoterm'},
+            {'r_offset': 0, 'ex_header': '运输模式', 'in_header': 'contract_incoterm'},
             {'r_offset': 0, 'ex_header': '运输费用', 'in_header': 'contract_supplier_transportation_cost'},
             {'r_offset': 0, 'ex_header': '外包装费用', 'in_header': 'contract_supplier_pkg_cost'},
             {'r_offset': 0, 'ex_header': '排序费用', 'in_header': 'contract_supplier_seq_cost'},

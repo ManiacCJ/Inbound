@@ -327,6 +327,40 @@ class InboundTCS(models.Model):
         return '零件 %s' % str(self.bom)
 
 
+class UnsortedInboundBuyer(models.Model):
+    """ Buyer not related to bom. """
+    part_number = models.CharField(max_length=32, verbose_name='零件号')
+    part_name = models.CharField(max_length=128, verbose_name='零件名称')
+    duns = models.CharField(max_length=16, verbose_name='合同DUNS')
+    supplier_name = models.CharField(max_length=128, verbose_name='合同供应商名称', null=True, blank=True)
+    buyer = models.CharField(max_length=64, null=True, blank=True, verbose_name='采购员')
+    measure_unit = models.CharField(max_length=8, null=True, blank=True, verbose_name='计量单位')
+    currency_unit = models.CharField(max_length=8, null=True, blank=True, verbose_name='货币单位')
+    area = models.IntegerField(null=True, blank=True, choices=BASE_CHOICE, verbose_name='台账区域')
+    inner_pkg_cost = models.FloatField(null=True, blank=True, verbose_name='内包装费用')
+    inner_pkg_owner = models.CharField(null=True, blank=True, max_length=16, verbose_name='内包装所有者')
+    outer_pkg_cost = models.FloatField(null=True, blank=True, verbose_name='外包装费用')
+    outer_pkg_owner = models.CharField(null=True, blank=True, max_length=16, verbose_name='外包装所有者')
+    carrier = models.CharField(null=True, blank=True, max_length=64, verbose_name='运输方')
+    transport_cost = models.FloatField(null=True, blank=True, verbose_name='运输费')
+    transport_mode = models.CharField(null=True, blank=True, max_length=16, verbose_name='运输模式')
+    whether_seq = models.NullBooleanField(verbose_name='运输是否排序')
+    seq_cost = models.FloatField(null=True, blank=True, verbose_name='排序费用')
+    location = models.CharField(null=True, blank=True, max_length=64, verbose_name='LOCATION')
+    bidderlist_no = models.CharField(null=True, blank=True, max_length=32, verbose_name='Bidderlist No')
+    project = models.CharField(null=True, blank=True, max_length=64, verbose_name='项目名')
+
+    class Meta:
+        verbose_name = '采购台账 信息'
+        verbose_name_plural = '采购台账 信息'
+        indexes = [
+            models.Index(fields=['area', 'part_number', 'duns'])
+        ]
+
+    def __str__(self):
+        return self.part_number
+
+
 class InboundBuyer(models.Model):
     """ Buyer data. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_buyer')
@@ -604,7 +638,8 @@ class UploadHandler(models.Model):
     file_to_be_uploaded = models.FileField(null=True, blank=True)
     upload_time = models.DateTimeField(auto_now=True, editable=False)
 
-    label = models.ForeignKey(NominalLabelMapping, null=True, blank=True, default=None, on_delete=models.CASCADE, verbose_name='车型')
+    label = models.ForeignKey(NominalLabelMapping, null=True, blank=True, default=None, on_delete=models.CASCADE,
+                              verbose_name='车型')
 
     class Meta:
         verbose_name = '上传文件暂存'
