@@ -188,18 +188,18 @@ class InboundCalculationInline(admin.StackedInline):
     extra = 0
 
 
-class LabelValueFilter(admin.SimpleListFilter):
+class ConfValueFilter(admin.SimpleListFilter):
     """  Filter by label value """
-    title = '车型'
-    parameter_name = 'labelvalue'
+    title = '配置'
+    parameter_name = 'conf'
 
     def lookups(self, request, model_admin):
-        existed_labels = models.Ebom.objects.values('label__value').distinct()
-        return [(e['label__value'], e['label__value']) for e in existed_labels]
+        existed_labels = models.Ebom.objects.values('conf').distinct()
+        return [(e['conf'], e['conf']) for e in existed_labels]
 
     def queryset(self, request, queryset):
         if self.value() is not None:
-            return queryset.filter(label__value__exact=self.value())
+            return queryset.filter(conf__exact=self.value())
         else:
             return queryset
 
@@ -213,6 +213,7 @@ class EbomAdmin(admin.ModelAdmin):
 
     list_display = (
         'label',
+        'conf',
         'upc',
         'fna',
         'structure_node',
@@ -307,7 +308,7 @@ class EbomAdmin(admin.ModelAdmin):
     ]
 
     list_filter = (
-        LabelValueFilter,
+        ConfValueFilter,
         ('label', admin.RelatedOnlyFieldListFilter),
     )
 
@@ -2152,6 +2153,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         if model_name != '999':
             fields.remove('label')
+            fields.remove('conf')
 
         return fields
 

@@ -103,7 +103,8 @@ class NominalLabelMapping(models.Model):
 
 class Ebom(models.Model):
     """ EBOM data. """
-    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='细分车型')
+    label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='车型')
+    conf = models.CharField(max_length=64, default=None, null=True, blank=True, verbose_name='配置')
 
     # other fields
     upc = models.CharField(max_length=20, verbose_name='UPC')
@@ -641,6 +642,7 @@ class UploadHandler(models.Model):
 
     label = models.ForeignKey(NominalLabelMapping, null=True, blank=True, default=None, on_delete=models.CASCADE,
                               verbose_name='车型')
+    conf = models.CharField(max_length=64, null=True, blank=True, default=None, verbose_name='配置')
 
     class Meta:
         verbose_name = '上传文件暂存'
