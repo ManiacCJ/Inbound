@@ -520,7 +520,8 @@ class InboundHeaderPart(models.Model):
 
         if not self.assembly_supplier:
             duns_supplier_list = []
-            for ebom_object in Ebom.objects.filter(part_number=self.head_part_number):
+            for ebom_object in Ebom.objects.filter(
+                    part_number=self.head_part_number, label=self.bom.label, conf=self.bom.conf):
                 if ebom_object.duns and ebom_object.supplier_name:
                     duns_supplier_list.append(f'{ebom_object.duns} - {ebom_object.supplier_name}')
 
