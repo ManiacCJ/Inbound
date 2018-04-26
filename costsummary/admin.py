@@ -222,7 +222,7 @@ class EbomAdmin(admin.ModelAdmin):
         'description_en',
         'description_cn',
         'header_part_number',
-        'get_quantity',
+        'quantity',
         'ar_em_material_indicator',
         'work_shop',
         # 'duns',
@@ -2190,7 +2190,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         elif obj.model_name == 999:
             # wide table
-            self.parse_wide(matrix)
+            self.parse_wide(matrix, label=obj.label, conf=obj.conf)
 
         else:
             raise Http404('无法识别的数据模式.')
@@ -2220,7 +2220,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
     download_buyer_template.allow_tags = True
     download_wide_template.allow_tags = True
 
-    def parse_wide(self, matrix: list):
+    def parse_wide(self, matrix: list, label: models.NominalLabelMapping, conf: str=None):
         """ Parse wide table """
         _ = self
 
@@ -2241,8 +2241,8 @@ class UploadHandlerAdmin(admin.ModelAdmin):
              'field_name': 'description_cn', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'HEADER PART NUMBER', 'in_header': 'header_part_number', 'model_name': 'ebom',
              'field_name': 'header_part_number', 'skip': False, 'match_display': False},
-            {'r_offset': 0, 'ex_header': 'QUANTITY', 'in_header': 'get_quantity', 'model_name': 'ebom',
-             'field_name': 'quantity', 'skip': True, 'match_display': False},
+            {'r_offset': 0, 'ex_header': 'QUANTITY', 'in_header': 'quantity', 'model_name': 'ebom',
+             'field_name': 'quantity', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'AR/EM MATERIAL INDICATOR', 'in_header': 'ar_em_material_indicator',
              'model_name': 'ebom', 'field_name': 'ar_em_material_indicator', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'WORK SHOP', 'in_header': 'work_shop', 'model_name': 'ebom',
@@ -2611,15 +2611,6 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         assert lookup_col
 
-        # params context
-        model_params = dict()
-
-        for dict_obj in WIDE_HEADER:
-            if dict_obj['model_name'] not in model_params:
-                model_params[dict_obj['model_name']] = dict()
-
-        print(model_params)
-
         # parse list of list
         for row in matrix[start_row:]:
             lookup_value = row[lookup_col]
@@ -2628,13 +2619,18 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             if lookup_value == '':
                 continue
 
-            # parse row cells
-            model_params_instance = model_params
+            # params context
+            model_params_instance = dict()
+            for dict_obj in WIDE_HEADER:
+                if dict_obj['model_name'] not in model_params_instance:
+                    model_params_instance[dict_obj['model_name']] = dict()
 
+            # parse row cells
             for dict_obj in WIDE_HEADER:
                 if not dict_obj['skip'] and dict_obj['col'] != lookup_col:
 
                     if not dict_obj['match_display']:
+                        print(dict_obj['model_name'])
                         model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = row[dict_obj['col']]
 
                     else:
@@ -2649,32 +2645,30 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                                 break
 
             # match ebom object
-            ebom_objects = models.Ebom.objects.filter(part_number=lookup_value)
+            ebom_object = models.Ebom.objects.filter(part_number=lookup_value, label=label, conf=conf).first()
 
-            if not ebom_objects:
+            if not ebom_object:
                 new_ebom_object = models.Ebom(
-                    label=None,
+                    label=label,
+                    conf=conf,
                     part_number=lookup_value
                 )
                 new_ebom_object.save()
 
-                ebom_objects = [new_ebom_object]
+                ebom_object = new_ebom_object
 
-            # save ebom object and related objects
-            for ebom_object in ebom_objects:
+            # ebom object
+            native_params = model_params_instance['ebom']
+            model_params_instance.pop('ebom')
 
-                # ebom object
-                native_params = model_params_instance['ebom']
-                model_params_instance.pop('ebom')
+            for attribute in native_params:
+                if native_params[attribute] == '':
+                    native_params[attribute] = None
+                setattr(ebom_object, attribute, native_params[attribute])
 
-                for attribute in native_params:
-                    if native_params[attribute] == '':
-                        native_params[attribute] = None
-                    setattr(ebom_object, attribute, native_params[attribute])
+            ebom_object.save()
 
-                ebom_object.save()
-
-                # related object
+            # related object
 
 
 @admin.register(models.Constants)

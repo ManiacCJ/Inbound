@@ -118,6 +118,7 @@ class Ebom(models.Model):
     description_cn = models.CharField(max_length=128, null=True, blank=True, verbose_name='Description CN')
 
     header_part_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Header Part Number')
+    quantity = models.IntegerField(null=True, blank=True, verbose_name='Quantity')
 
     ar_em_choices = ((True, 'AR'), (False, 'EM'))
     ar_em_material_indicator = models.NullBooleanField(verbose_name='AR/EM Material Indicator', choices=ar_em_choices)
@@ -138,18 +139,21 @@ class Ebom(models.Model):
         verbose_name_plural = 'EBOM 数据'
 
     def __str__(self):
-        return self.part_number
+        return str(self.part_number)
 
     def save(self, *args, **kwargs):
         if self.vendor_duns_number:
-            _duns = self.vendor_duns_number.split('_')
-
             try:
-                self.duns = int(_duns[0])
+                self.duns = int(self.vendor_duns_number)
 
-            except ValueError as e:
-                print(e)
-                self.duns = None
+            except ValueError:
+                try:
+                    _duns = self.vendor_duns_number.split('_')
+                    self.duns = int(_duns[0])
+
+                except ValueError as e:
+                    print(e)
+                    self.duns = None
 
         if self.description_en:
             self.tec = TecCore.objects.filter(mgo_part_name_list__contains=self.description_en.upper()).first()
@@ -915,9 +919,7 @@ class InboundCalculation(models.Model):
 
     @property
     def quantity(self):
-        if hasattr(self.bom, 'rel_configuration'):
-            return max(self.bom.rel_configuration.all().values_list('quantity', flat=True))
-        return None
+        return self.bom.quantity
 
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
@@ -1190,7 +1192,7 @@ class InboundCalculation(models.Model):
                                     self.dom_truck_ttl_pcs = rate_gt_25km * single_part_vol * (
                                         1 + milkrun_manage_ratio)
 
-                if self.bom.duns:  # duns
+                if self.bom.vendor_duns_number:  # duns
                     pass
 
 
