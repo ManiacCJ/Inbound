@@ -386,6 +386,19 @@ class InboundBuyer(models.Model):
     def __str__(self):
         return '零件 %s' % str(self.bom)
 
+    def save(self, *args, **kwargs):
+        matched_buyer_object: UnsortedInboundBuyer = UnsortedInboundBuyer.objects.filter(
+            part_number=self.bom.part_number, duns=self.bom.duns).first()
+
+        if matched_buyer_object:
+            self.buyer = matched_buyer_object.buyer
+            self.contract_incoterm = matched_buyer_object.transport_mode
+            self.contract_supplier_transportation_cost = matched_buyer_object.transport_cost
+            self.contract_supplier_pkg_cost = matched_buyer_object.outer_pkg_cost
+            self.contract_supplier_seq_cost = matched_buyer_object.seq_cost
+
+        super().save(*args, **kwargs)
+
 
 class InboundAddress(models.Model):
     """ Inbound address. """
