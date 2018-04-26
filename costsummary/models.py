@@ -120,8 +120,8 @@ class Ebom(models.Model):
     header_part_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Header Part Number')
     quantity = models.IntegerField(null=True, blank=True, verbose_name='Quantity')
 
-    ar_em_choices = ((True, 'AR'), (False, 'EM'))
-    ar_em_material_indicator = models.NullBooleanField(verbose_name='AR/EM Material Indicator', choices=ar_em_choices)
+    ar_em_material_indicator = models.CharField(max_length=16, null=True, blank=True,
+                                                verbose_name='AR/EM Material Indicator')
 
     work_shop = models.CharField(max_length=16, null=True, blank=True, verbose_name='Work Shop')
     vendor_duns_number = models.CharField(max_length=32, null=True, blank=True, verbose_name='Duns / vendor number')
@@ -156,7 +156,9 @@ class Ebom(models.Model):
                     self.duns = None
 
         if self.description_en:
-            self.tec = TecCore.objects.filter(mgo_part_name_list__contains=self.description_en.upper()).first()
+            self.tec = TecCore.objects.filter(
+                models.Q(mgo_part_name_list__contains=self.description_en.upper()) | models.Q(
+                    common_part_name__contains=self.description_en.upper())).first()
 
         super().save(*args, **kwargs)
 
