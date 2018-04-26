@@ -86,19 +86,19 @@ class NominalLabelMapping(models.Model):
     value = models.CharField(max_length=128, verbose_name='车型名称')
 
     # composite primary keys
-    book = models.CharField(max_length=4, verbose_name='车系')
-    plant_code = models.CharField(max_length=8, verbose_name='分厂')
-    model = models.CharField(max_length=64, verbose_name='模型')
+    book = models.CharField(max_length=4, verbose_name='车系', null=True, blank=True)
+    plant_code = models.CharField(max_length=8, verbose_name='分厂', null=True, blank=True)
+    model = models.CharField(max_length=64, verbose_name='模型', null=True, blank=True)
 
     class Meta:
         verbose_name = '车型映射'
         verbose_name_plural = '车型映射'
 
-        # composite primary key constraints
-        unique_together = ("book", "plant_code", "model")
-
     def __str__(self):
-        return "{0}({1}, {2}, {3})".format(self.value, self.book, self.plant_code, self.model)
+        if self.book and self.plant_code and self.model:
+            return "{0}({1}, {2}, {3})".format(self.value, self.book, self.plant_code, self.model)
+        else:
+            return self.value
 
 
 class Ebom(models.Model):

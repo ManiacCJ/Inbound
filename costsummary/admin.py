@@ -312,7 +312,7 @@ class EbomAdmin(admin.ModelAdmin):
     )
 
     inlines = [
-        EbomConfigurationInline,
+        # EbomConfigurationInline,
         InboundHeaderPartInline,
         InboundTCSInline,
         InboundBuyerInline,
