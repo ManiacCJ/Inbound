@@ -2587,6 +2587,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         # check header row
         data_row = None
+        related_model_names = set()
 
         for dict_obj in WIDE_HEADER:
             if 'col' not in dict_obj or 'row' not in dict_obj:
@@ -2597,6 +2598,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                         raise Http404('Excel 格式不正确.')
                 else:
                     data_row = dict_obj['row'] + dict_obj['r_offset']
+
+            if dict_obj['model_name'] != 'ebom':
+                related_model_names.add(dict_obj['model_name'])
 
         # start parsing row
         start_row = data_row + 1
@@ -2630,7 +2634,6 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                 if not dict_obj['skip'] and dict_obj['col'] != lookup_col:
 
                     if not dict_obj['match_display']:
-                        print(dict_obj['model_name'])
                         model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = row[dict_obj['col']]
 
                     else:
@@ -2669,6 +2672,17 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             ebom_object.save()
 
             # related object
+            for related_model_name in related_model_names:
+                external_params = model_params_instance[related_model_name]
+                related_model = apps.get_model('costsummary', model_name=related_model_name)
+
+                related_object, _ = related_model.objects.get_or_create(bom=ebom_object)
+                for attribute in external_params:
+                    if external_params[attribute] == '':
+                        external_params[attribute] = None
+                    setattr(related_object, attribute, external_params[attribute])
+
+                related_object.save()
 
 
 @admin.register(models.Constants)

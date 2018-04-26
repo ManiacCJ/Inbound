@@ -515,7 +515,8 @@ class InboundHeaderPart(models.Model):
 
     def save(self, *args, **kwargs):
         """ match header part. """
-        self.head_part_number = self.bom.header_part_number
+        if not self.head_part_number:
+            self.head_part_number = self.bom.header_part_number
 
         if not self.assembly_supplier:
             duns_supplier_list = []
@@ -943,16 +944,17 @@ class InboundCalculation(models.Model):
         operation_mode = self.bom.rel_mode.operation_mode
         plant_code = self.bom.label.plant_code
 
-        if plant_code[0: 2] == 'SH':
-            base = 0
-        elif plant_code[0: 2] == 'DY':
-            base = 1
-        elif plant_code[0: 2] == 'NS':
-            base = 2
-        elif plant_code[0: 2] == 'WH':
-            base = 3
-        else:
-            base = -1
+        if plant_code:
+            if plant_code[0: 2] == 'SH':
+                base = 0
+            elif plant_code[0: 2] == 'DY':
+                base = 1
+            elif plant_code[0: 2] == 'NS':
+                base = 2
+            elif plant_code[0: 2] == 'WH':
+                base = 3
+            else:
+                base = -1
 
         # case 1
         if logistics_incoterm_mode == 4:  # inhouse
