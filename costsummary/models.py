@@ -1106,26 +1106,39 @@ class InboundCalculation(models.Model):
             if hasattr(self.bom, 'rel_buyer'):
                 self.ddp_pcs = self.bom.rel_buyer.contract_supplier_pkg_cost
 
-    def calculate_linehaul_oneway_pcs(self, mode: InboundMode, single_part_vol, distance, linehual_manage_ratio):
+    def calculate_linehaul_oneway_pcs(self, mode: InboundMode, single_part_vol, distance,
+                                      supplier_rate_object: InboundSupplierRate, linehual_manage_ratio):
         if self.linehaul_oneway_pcs is not None:
             return
 
         if mode.operation_mode == 5 and mode.logistics_incoterm_mode in (1, 2):  # 干线, (FCA, FCA Warehouse)
-            if single_part_vol is not None and distance is not None:
-                # get oneway rate
-                if self.bom.duns is None:
-                    return
+            if single_part_vol is None or distance is None:
+                return
 
-                supplier_rate_object: InboundSupplierRate = InboundSupplierRate.objects.filter(
-                    duns=self.bom.duns, base=self.base_prop).first()
+            # get oneway rate
+            if supplier_rate_object is None:
+                return
 
-                if supplier_rate_object is None:
-                    return
+            oneway_rate = supplier_rate_object.forward_rate
+            self.linehaul_oneway_pcs = single_part_vol * distance * (1.0 + linehual_manage_ratio)
 
-                oneway_rate = supplier_rate_object.forward_rate
+    def calculate_linehaul_backway_pcs(self, mode: InboundMode, single_part_vol, distance,
+                                       supplier_rate_object: InboundSupplierRate, linehual_manage_ratio,
+                                       sgm_pkg_folding_rate):
+        if self.linehaul_oneway_pcs is not None:
+            return
 
-                self.linehaul_oneway_pcs = single_part_vol * distance * (1.0 + linehual_manage_ratio)
+        if mode.operation_mode == 5 and mode.logistics_incoterm_mode in (1, 2):  # 干线, (FCA, FCA Warehouse)
+            if single_part_vol is None or distance is None:
+                return
 
+            # get backway rate
+            if supplier_rate_object is None or sgm_pkg_folding_rate is None:
+                return
+
+            backway_rate = supplier_rate_object.backward_rate
+            self.linehaul_oneway_pcs = single_part_vol * distance * sgm_pkg_folding_rate * (
+                    1.0 + linehual_manage_ratio)
 
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
@@ -1148,8 +1161,10 @@ class InboundCalculation(models.Model):
 
         if hasattr(self.bom, 'rel_package'):
             single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
+            sgm_pkg_folding_rate = self.bom.rel_package.sgm_pkg_folding_rate
         else:
             single_part_vol = None
+            sgm_pkg_folding_rate = None
 
         if hasattr(self.bom, 'rel_address'):
             distance = self.bom.rel_address.distance_to_sgm_plant
@@ -1158,8 +1173,21 @@ class InboundCalculation(models.Model):
 
         linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
 
+        if self.bom.duns is None:
+            supplier_rate_object = None
+        else:
+            supplier_rate_object = InboundSupplierRate.objects.filter(
+                duns=self.bom.duns, base=self.base_prop).first()
+
         # calculate pcs fields
         self.calculate_ddp_pcs(mode_object)
+        self.calculate_linehaul_oneway_pcs(mode_object, single_part_vol, distance,
+                                           supplier_rate_object, linehual_manage_ratio)
+        self.calculate_linehaul_backway_pcs(mode_object, single_part_vol, distance,
+                                            supplier_rate_object, linehual_manage_ratio, sgm_pkg_folding_rate)
+
+
+
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
         operation_mode = self.bom.rel_mode.operation_mode
