@@ -2932,3 +2932,11 @@ class UnsortedInboundTCSAdmin(admin.ModelAdmin):
         'duns',
     ]
 
+
+@admin.register(models.VMIRate)
+class VMIRateAdmin(admin.ModelAdmin):
+    list_display = (
+        'base',
+        'whether_repacking',
+        'rate'
+    )

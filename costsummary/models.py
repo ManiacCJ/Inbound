@@ -992,6 +992,20 @@ class RegionRouteRate(models.Model):
         return self.region_or_route
 
 
+class VMIRate(models.Model):
+    """ VMI rate """
+    base = models.IntegerField(choices=BASE_CHOICE)
+    whether_repacking = models.BooleanField()
+    rate = models.FloatField()
+
+    class Meta:
+        verbose_name = 'VMI rate'
+        verbose_name_plural = 'VMI rate'
+
+    def __str__(self):
+        return self.get_base_display() + ' ' + 'Repacking' if self.whether_repacking else ''
+
+
 class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
@@ -1120,7 +1134,7 @@ class InboundCalculation(models.Model):
                 return
 
             oneway_rate = supplier_rate_object.forward_rate
-            self.linehaul_oneway_pcs = single_part_vol * distance * (1.0 + linehual_manage_ratio)
+            self.linehaul_oneway_pcs = oneway_rate * single_part_vol * distance * (1.0 + linehual_manage_ratio)
 
     def calculate_linehaul_backway_pcs(self, mode: InboundMode, single_part_vol, distance,
                                        supplier_rate_object: InboundSupplierRate, linehual_manage_ratio,
@@ -1137,8 +1151,22 @@ class InboundCalculation(models.Model):
                 return
 
             backway_rate = supplier_rate_object.backward_rate
-            self.linehaul_oneway_pcs = single_part_vol * distance * sgm_pkg_folding_rate * (
+            self.linehaul_oneway_pcs = backway_rate * single_part_vol * distance * sgm_pkg_folding_rate * (
                     1.0 + linehual_manage_ratio)
+
+    def calculate_linehaul_vmi_pcs(self, mode: InboundMode, single_part_vol, repacking: bool):
+        if self.linehaul_vmi_pcs is not None:
+            return
+
+        if mode.operation_mode == 5 and mode.logistics_incoterm_mode in (1, 2):  # 干线, (FCA, FCA Warehouse)
+            if single_part_vol is None:
+                return
+
+            vmi_rate: VMIRate = VMIRate.objects.filter(base=self.base_prop, whether_repacking=repacking).first()
+            if vmi_rate is None or vmi_rate.rate is None:
+                return
+
+            self.linehaul_vmi_pcs = vmi_rate.rate * single_part_vol
 
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
@@ -1185,6 +1213,7 @@ class InboundCalculation(models.Model):
                                            supplier_rate_object, linehual_manage_ratio)
         self.calculate_linehaul_backway_pcs(mode_object, single_part_vol, distance,
                                             supplier_rate_object, linehual_manage_ratio, sgm_pkg_folding_rate)
+        self.calculate_linehaul_vmi_pcs(mode_object, single_part_vol, True)
 
 
 
