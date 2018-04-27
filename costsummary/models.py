@@ -94,7 +94,7 @@ class NominalLabelMapping(models.Model):
         verbose_name_plural = '车型映射'
 
     def __str__(self):
-        if self.book and self.plant_code and self.model:
+        if self.model is None:
             return "{0}({1}, {2}, {3})".format(self.value, self.book, self.plant_code, self.model)
         else:
             return self.value
@@ -1071,6 +1071,62 @@ class InboundCalculation(models.Model):
                                 getattr(self, calculable_field.name[-4:] + '_pcs') * self.bom.quantity
                             )
 
+    @property
+    def base_prop(self):
+        label = self.bom.label
+
+        if label is None:
+            return None
+
+        else:
+            plant_code = self.bom.label.plant_code
+
+            if plant_code is None:
+                return None
+
+            else:
+                if plant_code[0: 2] == 'SH':
+                    base = 0
+                elif plant_code[0: 2] == 'DY':
+                    base = 1
+                elif plant_code[0: 2] == 'NS':
+                    base = 2
+                elif plant_code[0: 2] == 'WH':
+                    base = 3
+                else:
+                    base = -1
+
+                return base
+
+    def calculate_ddp_pcs(self, mode: InboundMode):
+        if self.ddp_pcs is not None:
+            return
+
+        if mode.logistics_incoterm_mode in (2, 3):  # DDP or FCA Warehouse
+            if hasattr(self.bom, 'rel_buyer'):
+                self.ddp_pcs = self.bom.rel_buyer.contract_supplier_pkg_cost
+
+    def calculate_linehaul_oneway_pcs(self, mode: InboundMode, single_part_vol, distance, linehual_manage_ratio):
+        if self.linehaul_oneway_pcs is not None:
+            return
+
+        if mode.operation_mode == 5 and mode.logistics_incoterm_mode in (1, 2):  # 干线, (FCA, FCA Warehouse)
+            if single_part_vol is not None and distance is not None:
+                # get oneway rate
+                if self.bom.duns is None:
+                    return
+
+                supplier_rate_object: InboundSupplierRate = InboundSupplierRate.objects.filter(
+                    duns=self.bom.duns, base=self.base_prop).first()
+
+                if supplier_rate_object is None:
+                    return
+
+                oneway_rate = supplier_rate_object.forward_rate
+
+                self.linehaul_oneway_pcs = single_part_vol * distance * (1.0 + linehual_manage_ratio)
+
+
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
         for calculable_field in self._meta.get_fields():
@@ -1086,6 +1142,24 @@ class InboundCalculation(models.Model):
         if not self.bom.label:  # no base
             super().save(*args, **kwargs)
             return
+
+        # reusable object & constants
+        mode_object = self.bom.rel_mode
+
+        if hasattr(self.bom, 'rel_package'):
+            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
+        else:
+            single_part_vol = None
+
+        if hasattr(self.bom, 'rel_address'):
+            distance = self.bom.rel_address.distance_to_sgm_plant
+        else:
+            distance = None
+
+        linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
+
+        # calculate pcs fields
+        self.calculate_ddp_pcs(mode_object)
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
         operation_mode = self.bom.rel_mode.operation_mode
@@ -1346,5 +1420,7 @@ class InboundCalculation(models.Model):
                 if self.bom.vendor_duns_number:  # duns
                     pass
 
+        # calculate veh fields by pcs fields
+        self.calculate_veh_fields()
 
         super().save(*args, **kwargs)

@@ -934,10 +934,12 @@ class ParseArray:
 
         # search directory
         search_dir = os.path.join(PERSISTENCE_DIR, in_folder)
-        # row index
         index = 0
 
         for file in os.listdir(search_dir):
+            # row index
+            index = 0
+
             with open(os.path.join(PERSISTENCE_DIR, in_folder, file), encoding='gbk') as csvfile:
                 reader = csv.reader(csvfile, delimiter=',')
 
