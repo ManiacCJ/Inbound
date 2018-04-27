@@ -1265,6 +1265,22 @@ class InboundCalculation(models.Model):
                 print(e)
                 self.dom_cc_operation_pcs = None
 
+    def calculate_dom_water_backway_pcs(self, mode: InboundMode, sgm_pkg_folding_rate):
+        if self.dom_water_backway_pcs is not None:
+            return
+
+        if mode.operation_mode == 2 and mode.logistics_incoterm_mode in (1, 2):  # MR C, (FCA, FCA Warehouse)
+            if self.dom_water_oneway_pcs is not None and sgm_pkg_folding_rate is not None:
+                self.dom_water_backway_pcs = self.dom_water_oneway_pcs * sgm_pkg_folding_rate
+
+    def calculate_dom_water_ttl_pcs(self, mode: InboundMode):
+        if self.dom_water_ttl_pcs is not None:
+            return
+
+        if mode.operation_mode in (2, 3)  and mode.logistics_incoterm_mode in (1, 2):  # (MR C, B), (FCA, FCA Warehouse)
+            if self.dom_water_oneway_pcs is not None and self.dom_water_backway_pcs is not None:
+                self.dom_water_ttl_pcs = self.dom_water_oneway_pcs + self.dom_water_backway_pcs
+
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
         for calculable_field in self._meta.get_fields():
@@ -1320,8 +1336,11 @@ class InboundCalculation(models.Model):
                                             supplier_rate_object, linehual_manage_ratio, sgm_pkg_folding_rate)
         self.calculate_linehaul_vmi_pcs(mode_object, single_part_vol, self.repacking_prop)
 
-        self.calculate_dom_water_oneway_pcs(single_part_vol, cc_container_vol, liquid_load_ratio)
-
+        self.calculate_dom_water_oneway_pcs(mode_object, single_part_vol, cc_container_vol, liquid_load_ratio)
+        self.calculate_dom_cc_operation_pcs(mode_object, single_part_vol, cc_container_packing_rate,
+                                            cc_container_vol, liquid_load_ratio)
+        self.calculate_dom_water_backway_pcs(mode_object, sgm_pkg_folding_rate)
+        self.calculate_dom_water_ttl_pcs(mode_object)
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
         operation_mode = self.bom.rel_mode.operation_mode
