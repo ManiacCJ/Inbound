@@ -779,7 +779,7 @@ class InboundPackage(models.Model):
         if self.sgm_pkg_cubic_pcs is None:
             try:
                 self.sgm_pkg_cubic_pcs = (self.sgm_pkg_length * self.sgm_pkg_height *
-                                               self.sgm_pkg_width) / self.sgm_pkg_pcs / 1e9
+                                          self.sgm_pkg_width) / self.sgm_pkg_pcs / 1e9
 
             except (TypeError, ZeroDivisionError) as e:
                 print(e)
@@ -1189,7 +1189,7 @@ class InboundCalculation(models.Model):
             return
 
         if mode.operation_mode == 5 and mode.logistics_incoterm_mode in (1, 2):  # 干线, (FCA, FCA Warehouse)
-            if single_part_vol is None:
+            if single_part_vol is None or repacking is None:
                 return
 
             vmi_rate: VMIRate = VMIRate.objects.filter(base=self.base_prop, whether_repacking=repacking).first()
@@ -1197,6 +1197,26 @@ class InboundCalculation(models.Model):
                 return
 
             self.linehaul_vmi_pcs = vmi_rate.rate * single_part_vol
+
+    @property
+    def repacking_prop(self):
+        if not hasattr(self.bom, 'rel_package'):
+            return None
+
+        package_object = self.bom.rel_package
+        need_repacking = False
+
+        for _field in ('pcs', 'length', 'height', 'width', 'folding_rate'):
+            supplier_field = getattr(package_object, 'supplier_pkg_' + _field)
+            sgm_field = getattr(package_object, 'sgm_pkg_' + _field)
+
+            if supplier_field is not None and sgm_field is not None:
+                res = (supplier_field == sgm_field)
+                if not res:
+                    need_repacking = True
+                    break
+
+        return need_repacking
 
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
@@ -1243,9 +1263,7 @@ class InboundCalculation(models.Model):
                                            supplier_rate_object, linehual_manage_ratio)
         self.calculate_linehaul_backway_pcs(mode_object, single_part_vol, distance,
                                             supplier_rate_object, linehual_manage_ratio, sgm_pkg_folding_rate)
-        self.calculate_linehaul_vmi_pcs(mode_object, single_part_vol, True)
-
-
+        self.calculate_linehaul_vmi_pcs(mode_object, single_part_vol, self.repacking_prop)
 
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
