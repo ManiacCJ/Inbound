@@ -1277,9 +1277,130 @@ class InboundCalculation(models.Model):
         if self.dom_water_ttl_pcs is not None:
             return
 
-        if mode.operation_mode in (2, 3)  and mode.logistics_incoterm_mode in (1, 2):  # (MR C, B), (FCA, FCA Warehouse)
+        if mode.operation_mode in (2, 3) and mode.logistics_incoterm_mode in (1, 2):  # (MR C, B), (FCA, FCA Warehouse)
             if self.dom_water_oneway_pcs is not None and self.dom_water_backway_pcs is not None:
                 self.dom_water_ttl_pcs = self.dom_water_oneway_pcs + self.dom_water_backway_pcs
+
+    def calculate_oversea_inland_pcs(self, mode: InboundMode, single_part_vol):
+        if self.oversea_inland_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            if self.bom.duns is None:
+                return
+
+            oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
+                supplier_duns=self.bom.duns).first()
+
+            if oversea_supplier_object is None or oversea_supplier_object.cpc is None or single_part_vol is None:
+                return
+
+            self.oversea_inland_pcs = oversea_supplier_object.cpc * single_part_vol
+
+    def calculate_oversea_cc_op_pcs(self, mode: InboundMode, single_part_vol, usd_exchange_rate):
+        if self.oversea_cc_op_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            if self.bom.duns is None:
+                return
+
+            oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
+                supplier_duns=self.bom.duns).first()
+
+            if oversea_supplier_object is None or oversea_supplier_object.state is None:
+                return
+
+            cc_location_object: InboundCcLocations = InboundCcLocations.objects.filter(
+                en_location_name=oversea_supplier_object.state).first()
+
+            if cc_location_object is None or cc_location_object.cc is None:
+                return
+
+            cc_object: InboundCcOperation = InboundCcOperation.objects.filter(cc=cc_location_object.cc).first()
+
+            if cc_object is None:
+                return
+
+            self.oversea_cc_op_pcs = cc_object.cbm_in_usd * single_part_vol * usd_exchange_rate
+
+    def calculate_international_ocean_pcs(self, mode: InboundMode, single_part_vol):
+        if self.international_ocean_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            if self.bom.duns is None:
+                return
+
+            oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
+                supplier_duns=self.bom.duns).first()
+
+            if oversea_supplier_object is None or oversea_supplier_object.state is None:
+                return
+
+            rate_object: InboundOverseaRate = InboundOverseaRate.objects.filter(
+                region=oversea_supplier_object.state, base=self.base_prop).first()
+
+            if rate_object is None:
+                return
+
+            try:
+                self.international_ocean_pcs = rate_object.inter_40h_rate * single_part_vol / (
+                        rate_object.vol_40h * rate_object.load_rate)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                self.international_ocean_pcs = None
+
+    def calculate_dom_pull_pcs(self, mode: InboundMode, single_part_vol):
+        if self.dom_pull_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            if self.bom.duns is None:
+                return
+
+            oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
+                supplier_duns=self.bom.duns).first()
+
+            if oversea_supplier_object is None or oversea_supplier_object.state is None:
+                return
+
+            rate_object: InboundOverseaRate = InboundOverseaRate.objects.filter(
+                region=oversea_supplier_object.state, base=self.base_prop).first()
+
+            if rate_object is None:
+                return
+
+            try:
+                self.dom_pull_pcs = rate_object.dm_40h_rate * single_part_vol / (
+                        rate_object.vol_40h * rate_object.load_rate)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                self.dom_pull_pcs = None
+
+    def calculate_certificate_pcs(self, mode: InboundMode):
+        if self.certificate_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            if self.oversea_inland_pcs is not None and self.oversea_cc_op_pcs is not None:
+                self.certificate_pcs = (self.oversea_inland_pcs + self.oversea_cc_op_pcs) / 9.0
+
+    def calculate_oversea_ocean_ttl_pcs(self, mode: InboundMode):
+        if self.oversea_ocean_ttl_pcs is not None:
+            return
+
+        if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
+            _total = 0.0
+            _total += self.oversea_inland_pcs if self.oversea_inland_pcs else 0.0
+            _total += self.oversea_cc_op_pcs if self.oversea_cc_op_pcs else 0.0
+            _total += self.international_ocean_pcs if self.international_ocean_pcs else 0.0
+            _total += self.dom_pull_pcs if self.dom_pull_pcs else 0.0
+            _total += self.certificate_pcs if self.certificate_pcs else 0.0
+
+            self.oversea_ocean_ttl_pcs = _total
 
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
@@ -1321,6 +1442,7 @@ class InboundCalculation(models.Model):
             liquid_load_ratio = Constants.objects.get(constant_key='国内CC整车液体装载率').constant_value_float
 
         cc_container_packing_rate = Constants.objects.get(constant_key='国内CC单箱操作费').constant_value_float
+        usd_exchange_rate = Constants.objects.get(constant_key='美元汇率').constant_value_float
 
         if self.bom.duns is None:
             supplier_rate_object = None
@@ -1341,6 +1463,13 @@ class InboundCalculation(models.Model):
                                             cc_container_vol, liquid_load_ratio)
         self.calculate_dom_water_backway_pcs(mode_object, sgm_pkg_folding_rate)
         self.calculate_dom_water_ttl_pcs(mode_object)
+
+        self.calculate_oversea_inland_pcs(mode_object, single_part_vol)
+        self.calculate_oversea_cc_op_pcs(mode_object, single_part_vol, usd_exchange_rate)
+        self.calculate_international_ocean_pcs(mode_object, single_part_vol)
+        self.calculate_dom_pull_pcs(mode_object, single_part_vol)
+        self.calculate_certificate_pcs(mode_object)
+        self.calculate_oversea_ocean_ttl_pcs(mode_object)
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
         operation_mode = self.bom.rel_mode.operation_mode
