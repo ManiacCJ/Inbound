@@ -691,7 +691,8 @@ class ParseArray:
         """ Parse TCS data. """
         # tcs header
         TCS_HEADER = [
-            {'r_offset': 0, 'ex_header': 'P/N', 'in_header': 'bom:part_number'},
+            {'r_offset': 0, 'ex_header': 'P/N', 'in_header': 'part_number'},
+            {'r_offset': 0, 'ex_header': 'DUNS', 'in_header': 'duns'},
             {'r_offset': 0, 'ex_header': 'Bidderlist No.', 'in_header': 'bidder_list_number'},
             {'r_offset': 0, 'ex_header': 'Program', 'in_header': 'program'},
             {'r_offset': 0, 'ex_header': 'Supplier Address', 'in_header': 'supplier_ship_from_address'},
@@ -980,6 +981,9 @@ class ParseArray:
                         location = row[18].strip() if row[18].strip() else None
                         bidderlist_no = row[19].strip() if row[19].strip() else None
                         project = row[20].strip() if row[20].strip() else None
+
+                        if not part_name or not duns:
+                            continue
 
                         t = models.UnsortedInboundBuyer(
                             part_number=part_number,

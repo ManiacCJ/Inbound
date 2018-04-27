@@ -2874,7 +2874,7 @@ class RegionRouteRateAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.UnsortedInboundBuyer)
-class UnsortedInboundBuyer(admin.ModelAdmin):
+class UnsortedInboundBuyerAdmin(admin.ModelAdmin):
     list_display = (
         'part_number',
         'part_name',
@@ -2907,3 +2907,28 @@ class UnsortedInboundBuyer(admin.ModelAdmin):
     list_filter = [
         'area',
     ]
+
+
+@admin.register(models.UnsortedInboundTCS)
+class UnsortedInboundTCSAdmin(admin.ModelAdmin):
+    list_display = (
+        'part_number',
+        'duns',
+        'bidder_list_number',
+        'program',
+        'supplier_ship_from_address',
+        'process',
+        'suggest_delivery_method',
+        'sgm_transport_duty',
+        'supplier_transport_duty',
+        'sgm_returnable_duty',
+        'supplier_returnable_duty',
+        'consignment_mode',
+        'comments',
+    )
+
+    search_fields = [
+        'part_number',
+        'duns',
+    ]
+

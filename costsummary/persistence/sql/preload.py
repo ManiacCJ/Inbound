@@ -8,11 +8,11 @@ conn = cx_Oracle.connect('WSTCMS', 'Pass1124', '10.203.45.169:1534/TCMS.SGM.COM'
 cursor = conn.cursor()
 
 if sys.platform == 'win32':
-    django_db = 'D:\\sgmuserprofile\\siz5v8\\Documents\\Solutions\\Inbound\\db.sqlite3'
+    django_db = 'D:\\sgmuserprofile\\siz5v8\\Documents\\Solutions\\Inbound\\db.sqlite3.bak'
     preload_dir = 'D:\\sgmuserprofile\\siz5v8\\Documents\\Solutions\\Inbound\\preload'
 
 elif sys.platform == 'linux':
-    django_db = '/midware/cron/db.sqlite3'
+    django_db = '/midware/cron/db.sqlite3.bak'
     preload_dir = '/midware/data/ib-preload'
 
 else:
