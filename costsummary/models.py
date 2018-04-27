@@ -765,6 +765,36 @@ class InboundPackage(models.Model):
     def __str__(self):
         return '零件 %s' % str(self.bom)
 
+    def save(self, *args, **kwargs):
+        """ dependent fields """
+        if self.supplier_pkg_cubic_pcs is None:
+            try:
+                self.supplier_pkg_cubic_pcs = (self.supplier_pkg_length * self.supplier_pkg_height *
+                                               self.supplier_pkg_width) / self.supplier_pkg_pcs / 1e9
+
+            except (TypeError, ZeroDivisionError) as e:
+                print(e)
+                self.supplier_pkg_cubic_pcs = None
+
+        if self.sgm_pkg_cubic_pcs is None:
+            try:
+                self.sgm_pkg_cubic_pcs = (self.sgm_pkg_length * self.sgm_pkg_height *
+                                               self.sgm_pkg_width) / self.sgm_pkg_pcs / 1e9
+
+            except (TypeError, ZeroDivisionError) as e:
+                print(e)
+                self.sgm_pkg_cubic_pcs = None
+
+        if self.supplier_pkg_cubic_veh is None and self.supplier_pkg_cubic_pcs is not None:
+            if self.bom.quantity is not None:
+                self.supplier_pkg_cubic_veh = self.bom.quantity * self.supplier_pkg_cubic_pcs
+
+        if self.sgm_pkg_cubic_veh is None and self.sgm_pkg_pcs is not None:
+            if self.bom.quantity is not None:
+                self.sgm_pkg_cubic_veh = self.bom.quantity * self.sgm_pkg_pcs
+
+        super().save(*args, **kwargs)
+
 
 class UploadHandler(models.Model):
     """ Upload files. """
