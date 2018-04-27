@@ -2940,3 +2940,12 @@ class VMIRateAdmin(admin.ModelAdmin):
         'whether_repacking',
         'rate'
     )
+
+
+@admin.register(models.WaterwayRate)
+class WaterwayRateAdmin(admin.ModelAdmin):
+    list_display = (
+        'start_base',
+        'destination_base',
+        'rate'
+    )

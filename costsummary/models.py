@@ -1029,11 +1029,25 @@ class VMIRate(models.Model):
     rate = models.FloatField()
 
     class Meta:
-        verbose_name = 'VMI rate'
-        verbose_name_plural = 'VMI rate'
+        verbose_name = 'VMI 费率'
+        verbose_name_plural = 'VMI 费率'
 
     def __str__(self):
         return self.get_base_display() + ' ' + 'Repacking' if self.whether_repacking else ''
+
+
+class WaterwayRate(models.Model):
+    """ Water way rate. """
+    start_base = models.IntegerField(choices=BASE_CHOICE)
+    destination_base = models.IntegerField(choices=BASE_CHOICE)
+    rate = models.FloatField()
+
+    class Meta:
+        verbose_name = '水运费率'
+        verbose_name_plural = '水运费率'
+
+    def __str__(self):
+        return '%s -> %s' % (self.get_start_base_display(), self.get_destination_base_display())
 
 
 class InboundCalculation(models.Model):
@@ -1218,6 +1232,39 @@ class InboundCalculation(models.Model):
 
         return need_repacking
 
+    def calculate_dom_water_oneway_pcs(self, mode: InboundMode, single_part_vol, cc_container_vol, liquid_load_ratio):
+        if self.dom_water_oneway_pcs is not None:
+            return
+
+        if mode.operation_mode == 2 and mode.logistics_incoterm_mode in (1, 2):  # MR C, (FCA, FCA Warehouse)
+
+            waterway_rate_object = WaterwayRate.objects.filter(start_base=self.base_prop, destination_base=0).first()
+            if waterway_rate_object is None:
+                return
+
+            try:
+                self.dom_water_oneway_pcs = waterway_rate_object.rate / math.floor(
+                    cc_container_vol * liquid_load_ratio / single_part_vol)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                self.dom_water_oneway_pcs = None
+
+    def calculate_dom_cc_operation_pcs(self, mode: InboundMode, single_part_vol, cc_container_packing_rate,
+                                       cc_container_vol, liquid_load_ratio):
+        if self.dom_cc_operation_pcs is not None:
+            return
+
+        if mode.operation_mode == 2 and mode.logistics_incoterm_mode in (1, 2):  # MR C, (FCA, FCA Warehouse)
+
+            try:
+                self.dom_cc_operation_pcs = cc_container_packing_rate / math.floor(
+                    cc_container_vol * liquid_load_ratio / single_part_vol)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                self.dom_cc_operation_pcs = None
+
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
         for calculable_field in self._meta.get_fields():
@@ -1250,6 +1297,14 @@ class InboundCalculation(models.Model):
             distance = None
 
         linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
+        cc_container_vol = Constants.objects.get(constant_key='国内CC集装箱容积').constant_value_float
+
+        if self.veh_pt == 2:  # pt
+            liquid_load_ratio = Constants.objects.get(constant_key='国内CCPT液体装载率').constant_value_float
+        else:  # veh
+            liquid_load_ratio = Constants.objects.get(constant_key='国内CC整车液体装载率').constant_value_float
+
+        cc_container_packing_rate = Constants.objects.get(constant_key='国内CC单箱操作费').constant_value_float
 
         if self.bom.duns is None:
             supplier_rate_object = None
@@ -1264,6 +1319,8 @@ class InboundCalculation(models.Model):
         self.calculate_linehaul_backway_pcs(mode_object, single_part_vol, distance,
                                             supplier_rate_object, linehual_manage_ratio, sgm_pkg_folding_rate)
         self.calculate_linehaul_vmi_pcs(mode_object, single_part_vol, self.repacking_prop)
+
+        self.calculate_dom_water_oneway_pcs(single_part_vol, cc_container_vol, liquid_load_ratio)
 
 
         logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
