@@ -11,7 +11,6 @@ from django.apps import apps
 # import django_excel
 
 from . import models
-from .dumps import ParseArray
 
 
 # rename admin labels
@@ -2182,11 +2181,12 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         if obj.model_name == 1:
             # TCS data
-            ParseArray.parse_tcs(matrix)
+            self.parse_tcs(matrix)
 
         elif obj.model_name == 2:
             # Buyer data
-            ParseArray.parse_buyer(matrix)
+            # ParseArray.parse_buyer(matrix)
+            pass
 
         elif obj.model_name == 999:
             # wide table
@@ -2219,6 +2219,120 @@ class UploadHandlerAdmin(admin.ModelAdmin):
     download_tcs_template.allow_tags = True
     download_buyer_template.allow_tags = True
     download_wide_template.allow_tags = True
+
+    def parse_tcs(self, matrix: list):
+        """ Parse TCS data. """
+        _ = self
+
+        # tcs header
+        TCS_HEADER = [
+            {'r_offset': 0, 'ex_header': 'P/N', 'in_header': 'part_number'},
+            {'r_offset': 0, 'ex_header': 'DUNS', 'in_header': 'duns'},
+            {'r_offset': 0, 'ex_header': 'Bidderlist No.', 'in_header': 'bidder_list_number'},
+            {'r_offset': 0, 'ex_header': 'Program', 'in_header': 'program'},
+            {'r_offset': 0, 'ex_header': 'Supplier Address', 'in_header': 'supplier_ship_from_address'},
+            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process', 'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Transport Duty', 'in_header': 'sgm_transport_duty',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Supplier\'s Transport Duty', 'in_header': 'supplier_transport_duty',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'SGM\'s Returnable Package Duty', 'in_header': 'sgm_returnable_duty',
+             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Supplier\'s Returnable Package Duty',
+             'in_header': 'supplier_returnable_duty', 'match_display': True},
+            {'r_offset': -1, 'ex_header': '外协加工业务模式\nConsignment Mode', 'in_header': 'consignment_mode',
+             'match_display': True},
+
+            {'r_offset': 0, 'ex_header': 'Container Name', 'in_header': 'supplier_pkg_name'},
+            {'r_offset': 0, 'ex_header': 'Quantity', 'in_header': 'supplier_pkg_pcs'},
+            {'r_offset': 0, 'ex_header': 'Length', 'in_header': 'supplier_pkg_length'},
+            {'r_offset': 0, 'ex_header': 'Height', 'in_header': 'supplier_pkg_height'},
+            {'r_offset': 0, 'ex_header': 'Width', 'in_header': 'supplier_pkg_width'},
+
+            {'r_offset': 0, 'ex_header': 'GM_PKG_CONTAINER_NAME', 'in_header': 'sgm_pkg_name'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_QTY', 'in_header': 'sgm_pkg_pcs'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_LENGTH', 'in_header': 'sgm_pkg_length'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_WIDTH', 'in_header': 'sgm_pkg_width'},
+            {'r_offset': 0, 'ex_header': 'GM_PKG_HEIGHT', 'in_header': 'sgm_pkg_height'},
+        ]
+
+        for i in range(len(TCS_HEADER)):
+            TCS_HEADER[i]['ex_header'] = TCS_HEADER[i]['ex_header'].upper()  # upper-case
+
+        # cursor
+        for i in range(len(matrix)):
+            all_header_found = True
+
+            # all header field found
+            for dict_obj in TCS_HEADER:
+                if 'col' not in dict_obj:
+                    all_header_found = False
+                    break
+
+            if all_header_found:
+                break
+
+            row = matrix[i]
+
+            for j in range(len(row)):
+                cell = str(row[j])
+
+                for k in range(len(TCS_HEADER)):
+                    if cell.strip().upper() == TCS_HEADER[k]['ex_header']:
+                        TCS_HEADER[k]['col'] = j
+                        TCS_HEADER[k]['row'] = i
+
+        # check header row
+        data_row = None
+
+        for dict_obj in TCS_HEADER:
+            if 'col' not in dict_obj or 'row' not in dict_obj:
+                raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
+            else:
+                if data_row is not None:
+                    if dict_obj['row'] - dict_obj['r_offset'] != data_row:
+                        raise Http404('Excel 格式不正确.')
+                else:
+                    data_row = dict_obj['row'] + dict_obj['r_offset']
+
+        # start parsing row
+        start_row = data_row + 1
+
+        for row in matrix[start_row:]:
+            lookup_value = row[TCS_HEADER[0]['col']]
+
+            # if no actual value
+            if lookup_value == '':
+                continue
+
+            # always create new tcs & package objects
+            try:
+                unsorted_tcs_object = models.UnsortedInboundTCS(part_number=lookup_value)
+                params = dict()
+
+                for dict_obj in TCS_HEADER[1:]:
+                    if 'match_display' in dict_obj:
+                        choice = getattr(unsorted_tcs_object, dict_obj['in_header'] + '_choice')
+
+                        for int_val, str_val in choice:
+                            if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                params[dict_obj['in_header']] = int_val
+                                break
+
+                    else:
+                        params[dict_obj['in_header']] = row[dict_obj['col']]
+
+                for attribute in params:
+                    if params[attribute] == '':
+                        params[attribute] = None
+                    setattr(unsorted_tcs_object, attribute, params[attribute])
+
+                unsorted_tcs_object.save()
+
+            except Exception as e:
+                print(e)
 
     def parse_wide(self, matrix: list, label: models.NominalLabelMapping, conf: str=None):
         """ Parse wide table """
