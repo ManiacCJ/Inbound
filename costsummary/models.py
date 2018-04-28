@@ -94,7 +94,7 @@ class NominalLabelMapping(models.Model):
         verbose_name_plural = '车型映射'
 
     def __str__(self):
-        if self.model is None:
+        if self.model is not None:
             return "{0}({1}, {2}, {3})".format(self.value, self.book, self.plant_code, self.model)
         else:
             return self.value
@@ -104,6 +104,8 @@ class Ebom(models.Model):
     """ EBOM data. """
     label = models.ForeignKey(NominalLabelMapping, null=True, on_delete=models.CASCADE, verbose_name='车型')
     conf = models.CharField(max_length=64, default=None, null=True, blank=True, verbose_name='配置')
+    veh_pt_choice = ((1, 'VEH'), (2, 'PT'))
+    veh_pt = models.IntegerField(verbose_name='VEH or PT', default=1, choices=veh_pt_choice)
 
     # other fields
     upc = models.CharField(max_length=20, verbose_name='UPC')
@@ -857,6 +859,8 @@ class UploadHandler(models.Model):
     label = models.ForeignKey(NominalLabelMapping, null=True, blank=True, default=None, on_delete=models.CASCADE,
                               verbose_name='车型')
     conf = models.CharField(max_length=64, null=True, blank=True, default=None, verbose_name='配置')
+    veh_pt_choice = ((1, 'VEH'), (2, 'PT'))
+    veh_pt = models.IntegerField(verbose_name='VEH or PT', default=1, choices=veh_pt_choice)
 
     class Meta:
         verbose_name = '上传文件暂存'
@@ -1101,7 +1105,7 @@ class InboundCalculation(models.Model):
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
 
     veh_pt_choice = ((1, 'VEH'), (2, 'PT'))
-    veh_pt = models.IntegerField(verbose_name='VEH_PT', default=1, choices=veh_pt_choice)
+    veh_pt = models.IntegerField(verbose_name='VEH or PT', default=1, choices=veh_pt_choice)
 
     ddp_pcs = models.FloatField(null=True, blank=True, verbose_name='DDP运费/pcs')
 

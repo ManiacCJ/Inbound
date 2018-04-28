@@ -213,6 +213,7 @@ class EbomAdmin(admin.ModelAdmin):
     list_display = (
         'label',
         'conf',
+        'veh_pt',
         'upc',
         'fna',
         'structure_node',
@@ -309,6 +310,7 @@ class EbomAdmin(admin.ModelAdmin):
     list_filter = (
         ConfValueFilter,
         ('label', admin.RelatedOnlyFieldListFilter),
+        'veh_pt',
     )
 
     inlines = [
@@ -2153,6 +2155,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         if model_name != '999':
             fields.remove('label')
             fields.remove('conf')
+            fields.remove('veh_pt')
 
         return fields
 
@@ -2190,7 +2193,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         elif obj.model_name == 999:
             # wide table
-            self.parse_wide(matrix, label=obj.label, conf=obj.conf)
+            self.parse_wide(matrix, label=obj.label, conf=obj.conf, veh_pt=obj.veh_pt)
 
         else:
             raise Http404('无法识别的数据模式.')
@@ -2334,7 +2337,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             except Exception as e:
                 print(e)
 
-    def parse_wide(self, matrix: list, label: models.NominalLabelMapping, conf: str=None):
+    def parse_wide(self, matrix: list, label: models.NominalLabelMapping, conf: str=None, veh_pt=None):
         """ Parse wide table """
         _ = self
 
@@ -2762,13 +2765,15 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                                 break
 
             # match ebom object
-            ebom_object = models.Ebom.objects.filter(part_number=lookup_value, label=label, conf=conf).first()
+            ebom_object = models.Ebom.objects.filter(part_number=lookup_value, label=label, conf=conf,
+                                                     veh_pt=veh_pt).first()
 
             if not ebom_object:
                 new_ebom_object = models.Ebom(
                     label=label,
                     conf=conf,
-                    part_number=lookup_value
+                    part_number=lookup_value,
+                    veh_pt=veh_pt,
                 )
                 new_ebom_object.save()
 
@@ -2790,7 +2795,10 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                 external_params = model_params_instance[related_model_name]
                 related_model = apps.get_model('costsummary', model_name=related_model_name)
 
-                related_object, _ = related_model.objects.get_or_create(bom=ebom_object)
+                related_object = related_model.objects.filter(bom=ebom_object).first()
+                if not related_object:
+                    related_object = related_model(bom=ebom_object)
+
                 for attribute in external_params:
                     if external_params[attribute] == '':
                         external_params[attribute] = None
