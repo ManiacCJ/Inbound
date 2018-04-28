@@ -772,65 +772,32 @@ class ParseArray:
             if lookup_value == '':
                 continue
 
+            # always create new tcs & package objects
             try:
-                tcs_objects = models.InboundTCS.objects.filter(bom__part_number=int(lookup_value))
+                unsorted_tcs_object = models.UnsortedInboundTCS(part_number=lookup_value)
+                params = dict()
 
-            except ValueError as e:
+                for dict_obj in TCS_HEADER[1:]:
+                    if 'match_display' in dict_obj:
+                        choice = getattr(unsorted_tcs_object, dict_obj['in_header'] + '_choice')
+
+                        for int_val, str_val in choice:
+                            if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                params[dict_obj['in_header']] = int_val
+                                break
+
+                    else:
+                        params[dict_obj['in_header']] = row[dict_obj['col']]
+
+                for attribute in params:
+                    if params[attribute] == '':
+                        params[attribute] = None
+                    setattr(unsorted_tcs_object, attribute, params[attribute])
+
+                unsorted_tcs_object.save()
+
+            except Exception as e:
                 print(e)
-                pass
-
-            else:
-                for tcs_object in tcs_objects:
-                    params = dict()
-
-                    for dict_obj in TCS_HEADER[1: -10]:
-                        if 'match_display' in dict_obj:
-                            choice = getattr(tcs_object, dict_obj['in_header'] + '_choice')
-
-                            for int_val, str_val in choice:
-                                if row[dict_obj['col']].strip().upper() == str_val.upper():
-                                    params[dict_obj['in_header']] = int_val
-                                    break
-
-                        else:
-                            params[dict_obj['in_header']] = row[dict_obj['col']]
-
-                    for attribute in params:
-                        if params[attribute] == '':
-                            params[attribute] = None
-                        setattr(tcs_object, attribute, params[attribute])
-
-                    tcs_object.save()
-
-            try:
-                tcs_package_objects = models.InboundTCSPackage.objects.filter(bom__part_number=int(lookup_value))
-
-            except ValueError as e:
-                print(e)
-                pass
-
-            else:
-                for tcs_package_object in tcs_package_objects:
-                    params = dict()
-
-                    for dict_obj in TCS_HEADER[-10:]:
-                        if 'match_display' in dict_obj:
-                            choice = getattr(tcs_package_object, dict_obj['in_header'] + '_choice')
-
-                            for int_val, str_val in choice:
-                                if row[dict_obj['col']].strip().upper() == str_val.upper():
-                                    params[dict_obj['in_header']] = int_val
-                                    break
-
-                        else:
-                            params[dict_obj['in_header']] = row[dict_obj['col']]
-
-                    for attribute in params:
-                        if params[attribute] == '':
-                            params[attribute] = None
-                        setattr(tcs_package_object, attribute, params[attribute])
-
-                    tcs_package_object.save()
 
     @staticmethod
     def parse_buyer(matrix: list):

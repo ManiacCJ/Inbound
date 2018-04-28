@@ -2925,6 +2925,17 @@ class UnsortedInboundTCSAdmin(admin.ModelAdmin):
         'supplier_returnable_duty',
         'consignment_mode',
         'comments',
+
+        'supplier_pkg_name',
+        'supplier_pkg_pcs',
+        'supplier_pkg_length',
+        'supplier_pkg_width',
+        'supplier_pkg_height',
+        'sgm_pkg_name',
+        'sgm_pkg_pcs',
+        'sgm_pkg_length',
+        'sgm_pkg_width',
+        'sgm_pkg_height',
     )
 
     search_fields = [

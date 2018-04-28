@@ -327,6 +327,18 @@ class UnsortedInboundTCS(models.Model):
 
     comments = models.TextField(null=True, blank=True, verbose_name='备注')
 
+    supplier_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='供应商包装PK Name')
+    supplier_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='供应商包装PKPCS')
+    supplier_pkg_length = models.FloatField(null=True, blank=True, verbose_name='供应商包装PL')
+    supplier_pkg_width = models.FloatField(null=True, blank=True, verbose_name='供应商包装PW')
+    supplier_pkg_height = models.FloatField(null=True, blank=True, verbose_name='供应商包装PH')
+
+    sgm_pkg_name = models.CharField(max_length=16, null=True, blank=True, verbose_name='SGM包装PK Name')
+    sgm_pkg_pcs = models.IntegerField(null=True, blank=True, verbose_name='SGM包装PKPCS')
+    sgm_pkg_length = models.FloatField(null=True, blank=True, verbose_name='SGM包装PL')
+    sgm_pkg_width = models.FloatField(null=True, blank=True, verbose_name='SGM包装PW')
+    sgm_pkg_height = models.FloatField(null=True, blank=True, verbose_name='SGM包装PH')
+
     class Meta:
         verbose_name = '物流跟踪 信息'
         verbose_name_plural = '物流跟踪 信息'
@@ -903,8 +915,8 @@ class InboundCcOperation(models.Model):
     load_ratio = models.FloatField(verbose_name='装载率')
 
     class Meta:
-        verbose_name = '进口 CC操作'
-        verbose_name_plural = '进口 CC操作'
+        verbose_name = '进口 CC 操作'
+        verbose_name_plural = '进口 CC 操作'
 
     def __str__(self):
         return self.cc
