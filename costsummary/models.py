@@ -464,6 +464,24 @@ class InboundTCS(models.Model):
     def __str__(self):
         return '零件 %s' % str(self.bom)
 
+    def save(self, *args, **kwargs):
+        if self.bom.duns is not None:
+            matched_object: UnsortedInboundTCS = UnsortedInboundTCS.objects.filter(
+                part_number=self.bom.part_number, duns=self.bom.duns).order_by('-id').first()
+
+            if matched_object:
+                for field in matched_object._meta.get_fields():
+                    if field.name == 'id':
+                        continue
+
+                    if hasattr(self, field.name):
+                        field_val = getattr(self, field.name)
+
+                        if field_val is None:
+                            setattr(self, field.name, getattr(matched_object, field.name))
+
+        super().save(*args, **kwargs)
+
 
 class UnsortedInboundBuyer(models.Model):
     """ Buyer not related to bom. """
@@ -517,15 +535,16 @@ class InboundBuyer(models.Model):
         return '零件 %s' % str(self.bom)
 
     def save(self, *args, **kwargs):
-        matched_buyer_object: UnsortedInboundBuyer = UnsortedInboundBuyer.objects.filter(
-            part_number=self.bom.part_number, duns=self.bom.duns).first()
+        if self.bom.duns is not None:
+            matched_buyer_object: UnsortedInboundBuyer = UnsortedInboundBuyer.objects.filter(
+                part_number=self.bom.part_number, duns=self.bom.duns).first()
 
-        if matched_buyer_object:
-            self.buyer = matched_buyer_object.buyer
-            self.contract_incoterm = matched_buyer_object.transport_mode
-            self.contract_supplier_transportation_cost = matched_buyer_object.transport_cost
-            self.contract_supplier_pkg_cost = matched_buyer_object.outer_pkg_cost
-            self.contract_supplier_seq_cost = matched_buyer_object.seq_cost
+            if matched_buyer_object:
+                self.buyer = matched_buyer_object.buyer
+                self.contract_incoterm = matched_buyer_object.transport_mode
+                self.contract_supplier_transportation_cost = matched_buyer_object.transport_cost
+                self.contract_supplier_pkg_cost = matched_buyer_object.outer_pkg_cost
+                self.contract_supplier_seq_cost = matched_buyer_object.seq_cost
 
         super().save(*args, **kwargs)
 
@@ -779,6 +798,21 @@ class InboundPackage(models.Model):
 
     def save(self, *args, **kwargs):
         """ dependent fields """
+        if self.bom.duns is not None:
+            matched_object: UnsortedInboundTCS = UnsortedInboundTCS.objects.filter(
+                part_number=self.bom.part_number, duns=self.bom.duns).order_by('-id').first()
+
+            if matched_object:
+                for field in matched_object._meta.get_fields():
+                    if field.name == 'id':
+                        continue
+
+                    if hasattr(self, field.name):
+                        field_val = getattr(self, field.name)
+
+                        if field_val is None:
+                            setattr(self, field.name, getattr(matched_object, field.name))
+
         if self.supplier_pkg_cubic_pcs is None:
             try:
                 self.supplier_pkg_cubic_pcs = (self.supplier_pkg_length * self.supplier_pkg_height *
