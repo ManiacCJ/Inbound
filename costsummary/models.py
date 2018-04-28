@@ -139,6 +139,10 @@ class Ebom(models.Model):
         verbose_name = 'EBOM 数据'
         verbose_name_plural = 'EBOM 数据'
 
+        indexes = [
+            models.Index(fields=['conf', 'part_number', 'duns'])
+        ]
+
     def __str__(self):
         return str(self.part_number)
 
@@ -1104,9 +1108,6 @@ class InboundCalculation(models.Model):
     """ Fields to be calculated. """
     bom = models.OneToOneField(Ebom, on_delete=models.CASCADE, related_name='rel_calc')
 
-    veh_pt_choice = ((1, 'VEH'), (2, 'PT'))
-    veh_pt = models.IntegerField(verbose_name='VEH or PT', default=1, choices=veh_pt_choice)
-
     ddp_pcs = models.FloatField(null=True, blank=True, verbose_name='DDP运费/pcs')
 
     linehaul_oneway_pcs = models.FloatField(null=True, blank=True, verbose_name='干线去程/pcs')
@@ -1683,6 +1684,10 @@ class InboundCalculation(models.Model):
 
         self.inbound_ttl_pcs = _total
 
+    @property
+    def veh_pt_prop(self):
+        return self.bom.veh_pt
+
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
         for calculable_field in self._meta.get_fields():
@@ -1719,7 +1724,7 @@ class InboundCalculation(models.Model):
         linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
         cc_container_vol = Constants.objects.get(constant_key='国内CC集装箱容积').constant_value_float
 
-        if self.veh_pt == 2:  # pt
+        if self.veh_pt_prop == 2:  # pt
             liquid_load_ratio = Constants.objects.get(constant_key='国内CCPT液体装载率').constant_value_float
         else:  # veh
             liquid_load_ratio = Constants.objects.get(constant_key='国内CC整车液体装载率').constant_value_float
