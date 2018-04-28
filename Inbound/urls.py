@@ -15,8 +15,12 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
+from django.views.generic import RedirectView
+
 
 urlpatterns = [
+    # redirect to admin
+    url(r'^$', RedirectView.as_view(url='/admin')),
     url(r'^costsummary/', include('costsummary.urls')),
 
     # admin site
