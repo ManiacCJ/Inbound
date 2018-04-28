@@ -1402,6 +1402,237 @@ class InboundCalculation(models.Model):
 
             self.oversea_ocean_ttl_pcs = _total
 
+    def calculate_jq_dom_truck_ttl_pcs(self, distance, milkrun_manage_ratio, single_part_vol, district):
+        if distance is None or milkrun_manage_ratio is None or single_part_vol is None:
+            return
+
+        truck: TruckRate = TruckRate.objects.filter(name='上海12米卡车').first()
+        if truck is None:
+            return
+
+        if distance <= 25:  # within 25km
+            try:
+                rate_lt_25km = truck.oil_price * truck.charter_price / 9.0 * (
+                        distance * 2.0 / truck.avg_speed + truck.load_time)
+
+                self.dom_truck_ttl_pcs = rate_lt_25km / math.floor(
+                    truck.cube * truck.loading_ratio / single_part_vol
+                ) * (1 + milkrun_manage_ratio)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                return
+
+        else:  # greater than 25km
+            if district is None:
+                return
+
+            tri_r_object: RegionRouteRate = RegionRouteRate.objects.filter(region_or_route=district).first()
+            if tri_r_object is None:
+                return
+
+            try:
+                rate_gt_25km = tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
+                self.dom_truck_ttl_pcs = rate_gt_25km * single_part_vol * (
+                        1 + milkrun_manage_ratio)
+
+            except (TypeError, ValueError, ZeroDivisionError) as e:
+                print(e)
+                return
+
+    def calculate_dy_dom_truck_ttl_pcs(self, distance, milkrun_manage_ratio, single_part_vol, district):
+        if distance is None or milkrun_manage_ratio is None or single_part_vol is None:
+            return
+
+        truck: TruckRate = TruckRate.objects.filter(name='东岳12米卡车').first()
+        if truck is None:
+            return
+
+        try:
+            if distance <= 25:  # within 25km
+                km_rate = truck.oil_price * truck.charter_price / 9.0 * (
+                        distance * 2.0 / truck.avg_speed + truck.load_time)
+
+            else:  # greater than 25km
+                km_rate = distance * truck.oil_price * truck.rate_per_km * 2.0
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+        # qingdao line rate
+        tri_r_object = RegionRouteRate.objects.filter(region_or_route='青岛线').first()
+        if tri_r_object is None:
+            return
+
+        try:
+            qingdao_line_rate = tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+        # cost
+        if district is None:
+            return
+
+        try:
+            if district == '青岛':
+                self.dom_truck_ttl_pcs = qingdao_line_rate / math.floor(
+                    truck.cube * truck.loading_ratio / single_part_vol
+                ) * (1 + milkrun_manage_ratio)
+
+            else:
+                self.dom_truck_ttl_pcs = km_rate / math.floor(
+                    truck.cube * truck.loading_ratio / single_part_vol
+                ) * (1 + milkrun_manage_ratio)
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+    def calculate_ns_dom_truck_ttl_pcs(self, distance, milkrun_manage_ratio, single_part_vol, district):
+        if distance is None or milkrun_manage_ratio is None or single_part_vol is None:
+            return
+
+        truck: TruckRate = TruckRate.objects.filter(name='北盛12米卡车').first()
+        if truck is None:
+            return
+
+        try:
+            if distance <= 25:  # within 25km
+                km_rate = truck.oil_price * truck.charter_price / 9.0 * (
+                        distance * 2.0 / truck.avg_speed + truck.load_time)
+
+            else:  # greater than 25km
+                km_rate = distance * truck.oil_price * truck.rate_per_km * 2.0
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+        # changchun line rate
+        tri_r_object = RegionRouteRate.objects.filter(region_or_route='长春1').first()
+        if tri_r_object is None:
+            return
+
+        try:
+            changchun_line_rate = tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+        # cost
+        if district is None:
+            return
+
+        try:
+            if district == '长春':
+                self.dom_truck_ttl_pcs = changchun_line_rate / math.floor(
+                    truck.cube * truck.loading_ratio / single_part_vol
+                ) * (1 + milkrun_manage_ratio)
+
+            else:
+                self.dom_truck_ttl_pcs = km_rate / math.floor(
+                    truck.cube * truck.loading_ratio / single_part_vol
+                ) * (1 + milkrun_manage_ratio)
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+    @staticmethod
+    def wh_cubic_rate(distance):
+        if distance:
+            if distance <= 10.0:
+                return 3.89
+            elif distance <= 20:
+                return 6.51
+            elif distance <= 30:
+                return 11.66
+            elif distance <= 40:
+                return 16.52
+            elif distance <= 50:
+                return 23.32
+            elif distance <= 60:
+                return 27.2
+            elif distance <= 70:
+                return 36.92
+            else:
+                return 47
+        else:
+            return None
+
+    def calculate_wh_dom_truck_ttl_pcs(self, distance, milkrun_manage_ratio, single_part_vol, district):
+        if distance is None or milkrun_manage_ratio is None or single_part_vol is None:
+            return
+
+        if district and district in ['武汉园区', 'Milkrun武汉园区']:
+            km_rate = Constants.objects.get(
+                constant_key='Milkrun武汉园区费率').constant_value_float
+
+        else:
+            km_rate = self.wh_cubic_rate(distance)
+
+        try:
+            self.dom_truck_ttl_pcs = km_rate * single_part_vol * (1 + milkrun_manage_ratio)
+
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(e)
+            return
+
+    def calculate_dom_truck_ttl_pcs(self, mode: InboundMode, distance, milkrun_manage_ratio, single_part_vol, district):
+        if self.dom_truck_ttl_pcs is not None:
+            return
+
+        if mode.logistics_incoterm_mode in (1, 2):  # MR C, (FCA, FCA Warehouse)
+
+            if mode.operation_mode == 1:  # MR A
+                if distance is None or milkrun_manage_ratio is None or single_part_vol is None:
+                    return
+
+                if self.base_prop == 0:  # JQ
+                    self.calculate_jq_dom_truck_ttl_pcs(distance, milkrun_manage_ratio, single_part_vol, district)
+
+                elif self.base_prop == 1:  # DY
+                    self.calculate_dy_dom_truck_ttl_pcs(distance, milkrun_manage_ratio, single_part_vol, district)
+
+                elif self.base_prop == 3:  # NS
+                    self.calculate_ns_dom_truck_ttl_pcs(distance, milkrun_manage_ratio, single_part_vol, district)
+
+                elif self.base_prop == 4:  # WH
+                    self.calculate_wh_dom_truck_ttl_pcs(distance, milkrun_manage_ratio, single_part_vol, district)
+
+                else:
+                    return
+
+            elif mode.operation_mode == 2:  # MR C
+                self.calculate_jq_dom_truck_ttl_pcs(distance, milkrun_manage_ratio, single_part_vol, district)
+
+            elif mode.operation_mode == 5:  # 干线
+                if (self.linehaul_oneway_pcs is None or self.linehaul_vmi_pcs is None or
+                        self.linehaul_backway_pcs is None):
+                    return
+
+                self.dom_truck_ttl_pcs = self.linehaul_oneway_pcs + self.linehaul_vmi_pcs + self.linehaul_backway_pcs
+
+            else:
+                return
+
+    def calculate_inbound_ttl_pcs(self):
+        if self.inbound_ttl_pcs is not None:
+            return
+
+        _total = 0.0
+        _total += self.ddp_pcs if self.ddp_pcs else 0.0
+        _total += self.dom_truck_ttl_pcs if self.dom_truck_ttl_pcs else 0.0
+        _total += self.dom_water_ttl_pcs if self.dom_water_ttl_pcs else 0.0
+        _total += self.oversea_ocean_ttl_pcs if self.oversea_ocean_ttl_pcs else 0.0
+        _total += self.oversea_air_pcs if self.oversea_air_pcs else 0.0
+
+        self.inbound_ttl_pcs = _total
+
     def save(self, *args, **kwargs):
         """ Calculation when saving. """
         for calculable_field in self._meta.get_fields():
@@ -1430,8 +1661,10 @@ class InboundCalculation(models.Model):
 
         if hasattr(self.bom, 'rel_address'):
             distance = self.bom.rel_address.distance_to_sgm_plant
+            district = self.bom.rel_address.region_division
         else:
             distance = None
+            district = None
 
         linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
         cc_container_vol = Constants.objects.get(constant_key='国内CC集装箱容积').constant_value_float
@@ -1443,6 +1676,7 @@ class InboundCalculation(models.Model):
 
         cc_container_packing_rate = Constants.objects.get(constant_key='国内CC单箱操作费').constant_value_float
         usd_exchange_rate = Constants.objects.get(constant_key='美元汇率').constant_value_float
+        milkrun_manage_ratio = Constants.objects.get(constant_key='Milkrun管理费系数').constant_value_float
 
         if self.bom.duns is None:
             supplier_rate_object = None
@@ -1471,264 +1705,7 @@ class InboundCalculation(models.Model):
         self.calculate_certificate_pcs(mode_object)
         self.calculate_oversea_ocean_ttl_pcs(mode_object)
 
-        logistics_incoterm_mode = self.bom.rel_mode.logistics_incoterm_mode
-        operation_mode = self.bom.rel_mode.operation_mode
-        plant_code = self.bom.label.plant_code
-
-        if plant_code:
-            if plant_code[0: 2] == 'SH':
-                base = 0
-            elif plant_code[0: 2] == 'DY':
-                base = 1
-            elif plant_code[0: 2] == 'NS':
-                base = 2
-            elif plant_code[0: 2] == 'WH':
-                base = 3
-            else:
-                base = -1
-
-        # case 1
-        if logistics_incoterm_mode == 4:  # inhouse
-            pass
-
-        elif logistics_incoterm_mode == 3:  # DDP
-            if hasattr(self.bom, 'rel_buyer'):
-                self.ddp_pcs = self.bom.rel_buyer.contract_supplier_pkg_cost
-
-        elif logistics_incoterm_mode == 1:  # FCA
-
-            if operation_mode == 1:  # MR A
-                if base == 0:  # JQ
-
-                    if hasattr(self.bom, 'rel_address'):
-                        distance = self.bom.rel_address.distance_to_sgm_plant
-                        truck = TruckRate.objects.get(name='上海12米卡车')
-
-                        milkrun_manage_ratio = Constants.objects.get(
-                            constant_key='Milkrun管理费系数').constant_value_float
-
-                        if hasattr(self.bom, 'rel_package'):
-                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
-                        else:
-                            single_part_vol = None
-
-                        if distance <= 25:  # within 25km
-                            try:
-                                rate_lt_25km = truck.oil_price * truck.charter_price / 9.0 * (
-                                    distance * 2.0 / truck.avg_speed + truck.load_time)
-
-                            except Exception as e:
-                                print(e)
-                                rate_lt_25km = None
-
-                            if rate_lt_25km and single_part_vol:
-                                self.dom_truck_ttl_pcs = rate_lt_25km / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-
-                        else:  # greater than 25km
-                            district = self.bom.rel_address.region_division
-
-                            if district:
-                                tri_r_object = RegionRouteRate.objects.filter(region_or_route=district).first()
-                                rate_gt_25km = (
-                                    tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
-                                ) if tri_r_object else None
-
-                                if rate_gt_25km and single_part_vol:
-                                    self.dom_truck_ttl_pcs = rate_gt_25km * single_part_vol * (
-                                        1 + milkrun_manage_ratio)
-                elif base == 1:  # DY
-
-                    if hasattr(self.bom, 'rel_address'):
-                        distance = self.bom.rel_address.distance_to_sgm_plant
-                        truck = TruckRate.objects.get(name='东岳12米卡车')
-                        milkrun_manage_ratio = Constants.objects.get(
-                            constant_key='Milkrun管理费系数').constant_value_float
-
-                        if hasattr(self.bom, 'rel_package'):
-                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
-                        else:
-                            single_part_vol = None
-
-                        if distance <= 25:  # within 25km
-                            try:
-                                km_rate = truck.oil_price * truck.charter_price / 9.0 * (
-                                    distance * 2.0 / truck.avg_speed + truck.load_time)
-
-                            except Exception as e:
-                                print(e)
-                                km_rate = None
-
-                        else:  # greater than 25km
-                            try:
-                                km_rate = distance * truck.oil_price * truck.rate_per_km * 2.0
-
-                            except TypeError as e:
-                                print(e)
-                                km_rate = None
-
-                        # qingdao line rate
-                        tri_r_object = RegionRouteRate.objects.filter(region_or_route='青岛线').first()
-                        if tri_r_object:
-                            qingdao_line_rate = tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
-                        else:
-                            qingdao_line_rate = None
-
-                        # cost
-                        district = self.bom.rel_address.region_division
-
-                        if district and district == '青岛':
-                            if qingdao_line_rate:
-                                self.dom_truck_ttl_pcs = qingdao_line_rate / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-                        else:
-                            if km_rate:
-                                self.dom_truck_ttl_pcs = km_rate / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-
-                elif base == 3:  # NS
-
-                    if hasattr(self.bom, 'rel_address'):
-                        distance = self.bom.rel_address.distance_to_sgm_plant
-                        truck = TruckRate.objects.get(name='北盛12米卡车')
-                        milkrun_manage_ratio = Constants.objects.get(
-                            constant_key='Milkrun管理费系数').constant_value_float
-
-                        if hasattr(self.bom, 'rel_package'):
-                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
-                        else:
-                            single_part_vol = None
-
-                        if distance <= 25:  # within 25km
-                            try:
-                                km_rate = truck.oil_price * truck.charter_price / 9.0 * (
-                                    distance * 2.0 / truck.avg_speed + truck.load_time)
-
-                            except Exception as e:
-                                print(e)
-                                km_rate = None
-
-                        else:  # greater than 25km
-                            try:
-                                km_rate = distance * truck.oil_price * truck.rate_per_km * 2.0
-
-                            except TypeError as e:
-                                print(e)
-                                km_rate = None
-
-                        # qingdao line rate
-                        tri_r_object = RegionRouteRate.objects.filter(region_or_route='长春1').first()
-                        if tri_r_object:
-                            qingdao_line_rate = tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
-                        else:
-                            qingdao_line_rate = None
-
-                        # cost
-                        district = self.bom.rel_address.region_division
-
-                        if district and district == '长春':
-                            if qingdao_line_rate:
-                                self.dom_truck_ttl_pcs = qingdao_line_rate / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-                        else:
-                            if km_rate:
-                                self.dom_truck_ttl_pcs = km_rate / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-
-                elif base == 4:  # WH
-                    if hasattr(self.bom, 'rel_address'):
-                        distance = self.bom.rel_address.distance_to_sgm_plant
-                        milkrun_manage_ratio = Constants.objects.get(
-                            constant_key='Milkrun管理费系数').constant_value_float
-
-                        # cost
-                        district = self.bom.rel_address.region_division
-
-                        def wh_cubic_rate(_distance):
-                            if _distance:
-                                if _distance <= 10.0:
-                                    return 3.89
-                                elif _distance <= 20:
-                                    return 6.51
-                                elif _distance <= 30:
-                                    return 11.66
-                                elif _distance <= 40:
-                                    return 16.52
-                                elif _distance <= 50:
-                                    return 23.32
-                                elif _distance <= 60:
-                                    return 27.2
-                                elif _distance <= 70:
-                                    return 36.92
-                                else:
-                                    return 47
-                            else:
-                                return None
-
-                        if district and district in ['武汉园区', 'Milkrun武汉园区']:
-                            km_rate = Constants.objects.get(
-                                constant_key='Milkrun武汉园区费率').constant_value_float
-
-                        else:
-                            km_rate = wh_cubic_rate(distance)
-
-                        if hasattr(self.bom, 'rel_package'):
-                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
-                        else:
-                            single_part_vol = None
-
-                        if km_rate and single_part_vol:
-                            self.dom_truck_ttl_pcs = km_rate * single_part_vol * (1 + milkrun_manage_ratio)
-
-            elif operation_mode == 2:  # MR C
-                if base == 0:  # JQ
-
-                    if hasattr(self.bom, 'rel_address'):
-                        distance = self.bom.rel_address.distance_to_sgm_plant
-                        truck = TruckRate.objects.get(name='上海12米卡车')
-
-                        milkrun_manage_ratio = Constants.objects.get(
-                            constant_key='Milkrun管理费系数').constant_value_float
-
-                        if hasattr(self.bom, 'rel_package'):
-                            single_part_vol = self.bom.rel_package.sgm_pkg_cubic_pcs
-                        else:
-                            single_part_vol = None
-
-                        if distance <= 25:  # within 25km
-                            try:
-                                rate_lt_25km = truck.oil_price * truck.charter_price / 9.0 * (
-                                    distance * 2.0 / truck.avg_speed + truck.load_time)
-
-                            except Exception as e:
-                                print(e)
-                                rate_lt_25km = None
-
-                            if rate_lt_25km and single_part_vol:
-                                self.dom_truck_ttl_pcs = rate_lt_25km / math.floor(
-                                    truck.cube * truck.loading_ratio / single_part_vol
-                                ) * (1 + milkrun_manage_ratio)
-
-                        else:  # greater than 25km
-                            district = self.bom.rel_address.region_division
-
-                            if district:
-                                tri_r_object = RegionRouteRate.objects.filter(region_or_route=district).first()
-                                rate_gt_25km = (
-                                    tri_r_object.km * tri_r_object.price_per_cube * truck.oil_price
-                                ) if tri_r_object else None
-
-                                if rate_gt_25km and single_part_vol:
-                                    self.dom_truck_ttl_pcs = rate_gt_25km * single_part_vol * (
-                                        1 + milkrun_manage_ratio)
-
-                if self.bom.vendor_duns_number:  # duns
-                    pass
+        self.calculate_dom_truck_ttl_pcs(mode_object, distance, milkrun_manage_ratio, single_part_vol, district)
 
         # calculate veh fields by pcs fields
         self.calculate_veh_fields()
