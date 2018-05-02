@@ -1177,7 +1177,7 @@ class InboundCalculation(models.Model):
                             setattr(
                                 self,
                                 calculable_field.name,
-                                getattr(self, calculable_field.name[-4:] + '_pcs') * self.bom.quantity
+                                getattr(self, calculable_field.name[: -4] + '_pcs') * self.bom.quantity
                             )
 
     @property
@@ -1761,6 +1761,8 @@ class InboundCalculation(models.Model):
         self.calculate_oversea_ocean_ttl_pcs(mode_object)
 
         self.calculate_dom_truck_ttl_pcs(mode_object, distance, milkrun_manage_ratio, single_part_vol, district)
+
+        self.calculate_inbound_ttl_pcs()
 
         # calculate veh fields by pcs fields
         self.calculate_veh_fields()
