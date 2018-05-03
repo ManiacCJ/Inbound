@@ -327,6 +327,14 @@ class EbomAdmin(admin.ModelAdmin):
         InboundCalculationInline
     ]
 
+    def save_model(self, request, obj, form, change):
+        """ Force update and recalculate result. """
+        change = True
+        super().save_model(request, obj, form, change)
+
+        if hasattr(obj, 'rel_calc'):
+            obj.rel_calc.save(force_update=True)
+
     def changelist_view(self, request, extra_context=None):
         """ filter by session value """
         q = request.GET.copy()
@@ -2805,6 +2813,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                     setattr(related_object, attribute, external_params[attribute])
 
                 related_object.save()
+
+            # force update the calculation object
+            ebom_object.rel_calc.save(force_update=True)
 
 
 @admin.register(models.Constants)

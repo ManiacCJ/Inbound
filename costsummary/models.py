@@ -1672,8 +1672,8 @@ class InboundCalculation(models.Model):
                 return
 
     def calculate_inbound_ttl_pcs(self):
-        if self.inbound_ttl_pcs is not None:
-            return
+        # if self.inbound_ttl_pcs is not None:
+        #     return
 
         _total = 0.0
         _total += self.ddp_pcs if self.ddp_pcs else 0.0
