@@ -2953,6 +2953,11 @@ class InboundSupplierRateAdmin(admin.ModelAdmin):
         'base',
     )
 
+    search_fields = [
+        'supplier',
+        'duns'
+    ]
+
 
 @admin.register(models.TruckRate)
 class TruckRateAdmin(admin.ModelAdmin):
