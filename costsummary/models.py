@@ -1125,7 +1125,7 @@ class InboundCalculation(models.Model):
     oversea_inland_pcs = models.FloatField(null=True, blank=True, verbose_name='海外段内陆运输/pcs')
     oversea_cc_op_pcs = models.FloatField(null=True, blank=True, verbose_name='海外CC操作费/pcs')
     international_ocean_pcs = models.FloatField(null=True, blank=True, verbose_name='国际海运费/pcs')
-    dom_pull_pcs = models.FloatField(null=True, blank=True, verbose_name='国内拉动费/pcs')
+    dom_pull_pcs = models.FloatField(null=True, blank=True, verbose_name='国内拉动(含代收代付)费/pcs')
     certificate_pcs = models.FloatField(null=True, blank=True, verbose_name='单证费/pcs')
 
     oversea_ocean_ttl_pcs = models.FloatField(null=True, blank=True, verbose_name='进口海运/pcs')
@@ -1146,7 +1146,7 @@ class InboundCalculation(models.Model):
     oversea_inland_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 海外段内陆运输/veh')
     oversea_cc_op_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 海外CC操作费/veh')
     international_ocean_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国际海运费/veh')
-    dom_pull_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内拉动费/veh')
+    dom_pull_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 国内拉动(含代收代付)费/veh')
     certificate_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 单证费/veh')
 
     oversea_ocean_ttl_veh = models.FloatField(null=True, blank=True, verbose_name='单车费用 进口海运/veh')
@@ -1332,21 +1332,41 @@ class InboundCalculation(models.Model):
             if self.dom_water_oneway_pcs is not None and self.dom_water_backway_pcs is not None:
                 self.dom_water_ttl_pcs = self.dom_water_oneway_pcs + self.dom_water_backway_pcs
 
-    def calculate_oversea_inland_pcs(self, mode: InboundMode, single_part_vol):
+    def calculate_oversea_inland_pcs(self, mode: InboundMode, single_part_vol, district, region,
+                                     usd_exchange_rate, euro_exchange_rate):
         if self.oversea_inland_pcs is not None:
             return
 
         if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
-            if self.bom.duns is None:
+            if single_part_vol is None:
                 return
 
-            oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
-                supplier_duns=self.bom.duns).first()
+            according_to_duns_or_state = False
 
-            if oversea_supplier_object is None or oversea_supplier_object.cpc is None or single_part_vol is None:
-                return
+            if self.bom.duns is not None:
+                oversea_supplier_object: InboundCCSupplierRate = InboundCCSupplierRate.objects.filter(
+                    supplier_duns=self.bom.duns).first()
 
-            self.oversea_inland_pcs = oversea_supplier_object.cpc * single_part_vol
+                if oversea_supplier_object is None or oversea_supplier_object.cpc is None:
+                    according_to_duns_or_state = True
+                    self.oversea_inland_pcs = oversea_supplier_object.cpc * single_part_vol * usd_exchange_rate
+
+            if not according_to_duns_or_state:
+                if district is None:
+                    return
+
+                state = district
+                rate_object: InboundOverseaRate = InboundOverseaRate.objects.filter(
+                    region=state.upper(), base=self.base_prop).first()
+
+                if rate_object is None or rate_object.os_dm_rate is None:
+                    return
+
+                exchange_rate = usd_exchange_rate
+                if rate_object.cc[0: 2] == 'EU' or region == 'EU':
+                    exchange_rate = euro_exchange_rate
+
+                self.oversea_inland_pcs = rate_object.os_dm_rate * single_part_vol * exchange_rate
 
     def calculate_oversea_cc_op_pcs(self, mode: InboundMode, single_part_vol, usd_exchange_rate, district):
         if self.oversea_cc_op_pcs is not None:
@@ -1381,7 +1401,7 @@ class InboundCalculation(models.Model):
 
             self.oversea_cc_op_pcs = cc_object.cbm_in_usd * single_part_vol * usd_exchange_rate
 
-    def calculate_international_ocean_pcs(self, mode: InboundMode, single_part_vol, district):
+    def calculate_international_ocean_pcs(self, mode: InboundMode, single_part_vol, usd_exchange_rate, district):
         if self.international_ocean_pcs is not None:
             return
 
@@ -1409,7 +1429,7 @@ class InboundCalculation(models.Model):
 
             try:
                 self.international_ocean_pcs = rate_object.inter_40h_rate * single_part_vol / (
-                        rate_object.vol_40h * rate_object.load_rate)
+                        rate_object.vol_40h * rate_object.load_rate) * usd_exchange_rate
 
             except (TypeError, ValueError, ZeroDivisionError) as e:
                 print(e)
@@ -1442,20 +1462,23 @@ class InboundCalculation(models.Model):
                 return
 
             try:
-                self.dom_pull_pcs = rate_object.dm_40h_rate * single_part_vol / (
+                self.dom_pull_pcs = (rate_object.dm_40h_rate + rate_object.delegate) * single_part_vol / (
                         rate_object.vol_40h * rate_object.load_rate)
 
             except (TypeError, ValueError, ZeroDivisionError) as e:
                 print(e)
                 self.dom_pull_pcs = None
 
-    def calculate_certificate_pcs(self, mode: InboundMode):
+    def calculate_certificate_pcs(self, mode: InboundMode, region, euro_exchange_rate):
         if self.certificate_pcs is not None:
             return
 
         if mode.operation_mode == 6 and mode.logistics_incoterm_mode == 1:  # 进口, FCA
-            if self.oversea_inland_pcs is not None and self.oversea_cc_op_pcs is not None:
-                self.certificate_pcs = (self.oversea_inland_pcs + self.oversea_cc_op_pcs) / 9.0
+            if region is not None and region.upper() == 'EU':
+
+                if self.oversea_inland_pcs is not None and self.oversea_cc_op_pcs is not None:
+                    self.certificate_pcs = (self.oversea_inland_pcs + self.oversea_cc_op_pcs
+                                            ) * euro_exchange_rate / 9.0
 
     def calculate_oversea_ocean_ttl_pcs(self, mode: InboundMode):
         if self.oversea_ocean_ttl_pcs is not None:
@@ -1734,10 +1757,13 @@ class InboundCalculation(models.Model):
 
         if hasattr(self.bom, 'rel_address'):
             distance = self.bom.rel_address.distance_to_sgm_plant
-            district = self.bom.rel_address.region_division
+            # use province as district; the same as country for foreign countries instead of UA
+            district = self.bom.rel_address.province
+            region = self.bom.rel_address.region_division
         else:
             distance = None
             district = None
+            region = None
 
         linehual_manage_ratio = Constants.objects.get(constant_key='干线管理费系数').constant_value_float
         cc_container_vol = Constants.objects.get(constant_key='国内CC集装箱容积').constant_value_float
@@ -1749,6 +1775,7 @@ class InboundCalculation(models.Model):
 
         cc_container_packing_rate = Constants.objects.get(constant_key='国内CC单箱操作费').constant_value_float
         usd_exchange_rate = Constants.objects.get(constant_key='美元汇率').constant_value_float
+        euro_exchange_rate = Constants.objects.get(constant_key='欧元汇率').constant_value_float
         milkrun_manage_ratio = Constants.objects.get(constant_key='Milkrun管理费系数').constant_value_float
 
         if self.bom.duns is None:
@@ -1771,11 +1798,12 @@ class InboundCalculation(models.Model):
         self.calculate_dom_water_backway_pcs(mode_object, sgm_pkg_folding_rate)
         self.calculate_dom_water_ttl_pcs(mode_object)
 
-        self.calculate_oversea_inland_pcs(mode_object, single_part_vol)
+        self.calculate_oversea_inland_pcs(mode_object, single_part_vol, district, region,
+                                          usd_exchange_rate, euro_exchange_rate)
         self.calculate_oversea_cc_op_pcs(mode_object, single_part_vol, usd_exchange_rate, district)
-        self.calculate_international_ocean_pcs(mode_object, single_part_vol, district)
+        self.calculate_international_ocean_pcs(mode_object, single_part_vol, usd_exchange_rate, district)
         self.calculate_dom_pull_pcs(mode_object, single_part_vol, district)
-        self.calculate_certificate_pcs(mode_object)
+        self.calculate_certificate_pcs(mode_object, region, euro_exchange_rate)
         self.calculate_oversea_ocean_ttl_pcs(mode_object)
 
         self.calculate_dom_truck_ttl_pcs(mode_object, distance, milkrun_manage_ratio, single_part_vol, district)
