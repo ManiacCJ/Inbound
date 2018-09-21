@@ -85,17 +85,23 @@
             -->
 
             <!-- upload tcs sheet -->
-            <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=1" class="button">
+<!--             <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=1" class="button">
                 ↑ 上传 TCS 物流跟踪表
-            </a>
+            </a> -->
 
             <!-- download wide table -->
             {% if request.GET.label__id__exact %}
                 <a href="/costsummary/dl/wide/{{ request.GET.label__id__exact }}" class="button">↓ 下载宽表</a>
             {% endif %}
+            <!-- upload production table -->
+            <a href="{% url 'admin:costsummary_uploadhandler_add' %}?" class="button">↑ 上传表</a>
 
             <!-- upload wide table -->
             <a href="{% url 'admin:costsummary_uploadhandler_add' %}?model_name=999" class="button">↑ 上传宽表</a>
+
+            <!-- update -->
+            <a href="/costsummary/ebom/update" class="button"> 刷新</a>
+
 
         </div>
 

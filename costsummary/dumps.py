@@ -1,5 +1,6 @@
 import os
 import csv
+import pandas as pd
 from django.db import IntegrityError
 from django.shortcuts import Http404
 from django.core.exceptions import ValidationError
@@ -11,7 +12,6 @@ PERSISTENCE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     'persistence'
 )
-
 
 class InitializeData:
     """ Load initial csv-formatted data. """
@@ -50,6 +50,106 @@ class InitializeData:
 
         # return loaded row number
         return index
+
+    @staticmethod
+    def load_initial_packing_folding_rate(in_file='TEC/Packing_folding_rate.csv'):
+        """ Load sgm plant data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        models.PackingFoldingRate.objects.all().delete()
+
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index > 0:  # skip header
+                    packing_type = row[0].strip()
+                    folding_rate = row[1].strip()
+
+                    t = models.PackingFoldingRate(
+                        packing_type=packing_type.upper(),
+                        folding_rate=folding_rate  # upper case
+                    )
+
+                    # save models
+                    t.save()
+
+                # print(index)
+                index += 1
+
+        # return loaded row number
+        return index
+
+    @staticmethod
+    def load_initial_air_freight_rate(in_file='TEC/空运费率.xlsx'):
+        """ Load sgm plant data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        models.AirFreightRate.objects.all().delete()
+
+        reader=pd.read_excel(os.path.join(PERSISTENCE_DIR, in_file))
+        # row index
+        for index in range(len(reader)):
+            row=reader.iloc[index,:]
+            country = row[0].strip()
+            base = row[1].strip()
+            rate = row[2]
+            danger_rate = row[3]
+            t = models.AirFreightRate(
+                country=country,
+                base=base,  
+                rate=rate,
+                danger_rate=danger_rate                  
+            )
+
+            # save models
+            t.save()
+
+
+        # return loaded row number
+        return index
+
+
+    @staticmethod
+    def load_initial_wh_cube_price(in_file='TEC/wh_cube_price.csv'):
+        """ Load sgm plant data into backend database. """
+        print("Start loading...")
+
+        # delete all existed records
+        # models.WhCubePrice.objects.all().delete()
+
+        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+
+            # row index
+            index = 0
+
+            for row in reader:
+                if index > 0:  # skip header
+                    km = row[0]
+                    cube_price = row[1]
+
+                    t = models.WhCubePrice(
+                        km=km,
+                        cube_price=cube_price 
+                    )
+
+                    # save models
+                    t.save()
+
+                # print(index)
+                index += 1
+
+        # return loaded row number
+        return index
+
+
+
 
     @staticmethod
     def load_initial_nl_mapping(in_file='TEC/nl-mapping.csv'):
@@ -314,58 +414,48 @@ class InitializeData:
             return index
 
     @staticmethod
-    def load_initial_supplier_rate(in_file='TEC/supplier-rate.csv'):
+    def load_initial_supplier_rate(in_file='TEC/supplier-rate.xlsx'):
         """ Load cc location. """
         print("Start loading...")
 
         # delete existed objects
         models.InboundSupplierRate.objects.all().delete()
 
-        # find csv file path
-        with open(os.path.join(PERSISTENCE_DIR, in_file), encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
+        reader=pd.read_excel(os.path.join(PERSISTENCE_DIR, in_file))
 
-            # row index
-            index = 0
+        # reverse mapping of base
+        REV_BASE_CHOICE = dict()
+        for _i, _s in models.BASE_CHOICE:
+            if _i >= 0:  # exclude 3rd party
+                REV_BASE_CHOICE[_s] = _i
+        # row index
+        for index in range(len(reader)):
+            row=reader.iloc[index,:]
+            base = REV_BASE_CHOICE[row[0]]
+            pickup_location = row[1].strip() if row[1].strip() else None
+            supplier = row[2].strip() if row[2].strip() else None
+            forward_rate = row[3]
+            backward_rate = row[4]
+            manage_ratio = row[5]
+            vmi_rate = row[6]
+            oneway_km = row[7]
 
-            # reverse mapping of base
-            REV_BASE_CHOICE = dict()
-            for _i, _s in models.BASE_CHOICE:
-                if _i >= 0:  # exclude 3rd party
-                    REV_BASE_CHOICE[_s] = _i
+            s = models.InboundSupplierRate(
+                base=base,
+                pickup_location=pickup_location,
+                supplier=supplier,
+                forward_rate=forward_rate,
+                backward_rate=backward_rate,
+                manage_ratio=manage_ratio,
+                vmi_rate=vmi_rate,
+                oneway_km=oneway_km,
+            )
 
-            for row in reader:
-                if index >= 0:  # skip header
-                    base = REV_BASE_CHOICE[row[0]]
-                    pickup_location = row[1].strip() if row[1].strip() else None
-                    supplier = row[2].strip() if row[2].strip() else None
-                    forward_rate = float(row[3].strip()) if row[3].strip() else None
-                    backward_rate = float(row[4].strip()) if row[4].strip() else None
-                    manage_ratio = float(row[5].strip()[: -1]) * 0.01 if row[5].strip() else None
-                    vmi_rate = float(row[6].strip()) if row[6].strip() else None
-                    oneway_km = float(row[7].strip()) if row[7].strip() else None
-                    address = row[8].strip() if row[8].strip() else None
-
-                    s = models.InboundSupplierRate(
-                        base=base,
-                        pickup_location=pickup_location,
-                        supplier=supplier,
-                        forward_rate=forward_rate,
-                        backward_rate=backward_rate,
-                        manage_ratio=manage_ratio,
-                        vmi_rate=vmi_rate,
-                        oneway_km=oneway_km,
-                        address=address
-                    )
-
-                    # save models
-                    s.save()
-
-                # print(index)
-                index += 1
+            # save models
+            s.save()
 
             # return loaded row number
-            return index
+        return index
 
     @staticmethod
     def load_initial_distance(in_file='supplier/supplier-distance-new.csv'):
@@ -422,7 +512,6 @@ class InitializeData:
 
         with open(csv_path, encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
-
             # row index
             index = 0
 
@@ -447,7 +536,7 @@ class InitializeData:
                         elif row_1 == 'N' or row_1 == 'n':
                             is_mono_address = False
                         else:
-                            print(row_1)
+                            # print(row_1)
                             raise Exception
                     else:
                         is_mono_address = None
@@ -459,7 +548,7 @@ class InitializeData:
                         elif row_2 == 'N' or row_2 == 'n':
                             is_promised_address = False
                         else:
-                            print(row_2)
+                            # print(row_2)
                             raise Exception
                     else:
                         is_promised_address = None
@@ -596,7 +685,7 @@ class InitializeData:
                     capable_cube = float(row[3].strip())
                     avg_speed = float(row[4].strip())
                     load_time = float(row[5].strip())
-                    oil_price = float(row[6].strip()) if row[6] != '无' else None
+                    oil_price = float(row[6].strip()) if row[6].strip() else None
                     charter_price = float(row[7].strip()) if row[7].strip() else None
                     overdue_price = float(row[8].strip()) if row[8].strip() else None
                     rate_per_km = float(row[9].strip()) if row[9].strip() else None
@@ -656,14 +745,14 @@ class InitializeData:
 
                     related_base = None
                     for _i, _s in BASE_CHOICE:
-                        if row[0].strip() == _s:
+                        if row[1].strip() == _s:
                             related_base = _i
 
-                    parent_region = row[1].strip() if row[1].strip() else None
-                    region_or_route = row[2].strip()
+                    parent_region = row[2].strip() if row[2].strip() else None
+                    region_or_route = row[0].strip()
                     km = float(row[3].strip())
                     price_per_cube = float(row[4].strip())
-                    reference = row[5].strip() if row[4].strip() else None
+                    reference = row[5].strip() #if row[5].strip() else None
 
                     r = models.RegionRouteRate(
                         related_base=related_base,

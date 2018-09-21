@@ -2,10 +2,11 @@ from django.conf.urls import url
 
 from . import views
 
-
 urlpatterns = [
     # mute these after deployment
     url(r'^initialize/tecnum$', views.initialize_data, {'data': 'tec-num'}),
+    url(r'^initialize/fodingrate$', views.initialize_data, {'data': 'foldingrate'}),
+    url(r'^initialize/whcubeprice$', views.initialize_data, {'data': 'whcubeprice'}),
     url(r'^initialize/nl$', views.initialize_data, {'data': 'nl'}),
     url(r'^initialize/supplier', views.initialize_data, {'data': 'supplier'}),
     url(r'^initialize/osrate', views.initialize_data, {'data': 'osrate'}),
@@ -15,6 +16,7 @@ urlpatterns = [
     url(r'^initialize/ratesupplier', views.initialize_data, {'data': 'supplierrate'}),
     url(r'^initialize/truckrate', views.initialize_data, {'data': 'truckrate'}),
     url(r'^initialize/rrr', views.initialize_data, {'data': 'rrr'}),
+    url(r'^initialize/airfreightrate', views.initialize_data, {'data': 'airfreightrate'}),    
 
     url(r'^dsl/foreign-fields', views.dsl_list_display_foreign_fields),
     url(r'^dsl/wide-schema', views.dsl_parse_wide_schema),
@@ -26,4 +28,8 @@ urlpatterns = [
     url(r'^entry$', views.group_ebom_by_label, name='entry'),
     url(r'^dl/wide/(?P<nl_mapping_id>[0-9]+)$', views.download_wide_table, name='dl_wide'),
     url(r'^session/clear$', views.clear_label_session, name='session_clear'),
+
+    url(r'^ebom/update$', views.update_ebom, name='ebom_update'),
+
+    url(r'^configure/update$', views.update_configure, name='configure_update'),
 ]

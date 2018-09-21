@@ -7,6 +7,7 @@ from django.db.models import Model
 from django.shortcuts import Http404, redirect, reverse
 from django.contrib.admin import site as wide_table_dummy_param
 from django.apps import apps
+from django.http import HttpResponseRedirect
 
 import django_excel
 
@@ -23,6 +24,12 @@ def initialize_data(request, data):
 
     if data == 'tec-num':
         row_count = InitializeData.load_initial_tec_num()
+
+    elif data == 'foldingrate':
+        row_count = InitializeData.load_initial_packing_folding_rate()
+
+    elif data == 'whcubeprice':
+        row_count = InitializeData.load_initial_wh_cube_price()
 
     elif data == 'nl':
         row_count = InitializeData.load_initial_nl_mapping()
@@ -50,6 +57,9 @@ def initialize_data(request, data):
 
     elif data == 'rrr':
         row_count = InitializeData.load_initial_region_route_rate()
+
+    elif data == 'airfreightrate':
+        row_count = InitializeData.load_initial_air_freight_rate()
 
     return HttpResponse(
         "The initial %s data have been loaded. There are totally %d rows." % (data, row_count))
@@ -82,6 +92,39 @@ def group_ebom_by_label(request):
             index += 1
 
         return HttpResponse(f'{index} entries generated.')
+
+from . import statistic
+def update_ebom(request):
+    id_lst = models.Ebom.objects.values('id').distinct()
+    for char in id_lst:
+        id_num = char['id']
+        # print(id_num)
+        # ebom_object=models.Ebom.objects.filter(id = id_num).first()
+        # ebom_object.save()
+        for model in ['inboundcalculation','inboundaddress',
+                                    'inboundpackage',
+                                    'inboundtcspackage']:
+            related_model = apps.get_model('costsummary', model_name=model)
+            related_object = related_model.objects.filter(bom_id = id_num).first()
+            related_object.save()
+
+    statistic.conf_calculation()
+    statistic.model_statistic()
+    statistic.plant_statistic()
+    statistic.base_statistic()
+    statistic.sgm_statistic()
+
+    return redirect(reverse(f'admin:costsummary_{models.Ebom._meta.model_name}_changelist'))
+
+def update_configure(request):
+    statistic.conf_calculation()
+    statistic.model_statistic()
+    statistic.plant_statistic()
+    statistic.base_statistic()
+    statistic.sgm_statistic()
+    statistic.future_model_table()
+    statistic.summary_model_calculate()
+    return redirect(reverse(f'admin:costsummary_{models.ConfigureCalculation._meta.model_name}_changelist'))
 
 
 def download_sheet_template(request, sheet):

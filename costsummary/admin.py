@@ -7,10 +7,24 @@ from django.shortcuts import Http404
 from django.db import connection as RawConnection
 from django.db.models import Max
 from django.apps import apps
+import logging
+import os
+import sqlite3
+from Inbound.settings import BASE_DIR
+import json
+from decimal import * 
+import pandas as pd
+import numpy as np
+from . import models
+from . import statistic
+from . import upload
+# from django.views.decorators.csrf import csrf_protect
+# from django.utils.decorators import method_decorator
+# from django.db import models, router, transaction
+logger = logging.getLogger(__name__)
+# csrf_protect_m = method_decorator(csrf_protect)
 
 # import django_excel
-
-from . import models
 
 
 # rename admin labels
@@ -38,6 +52,45 @@ class TecCoreAdmin(admin.ModelAdmin):
     ordering = [
         'tec_id',
     ]
+
+@admin.register(models.PackingFoldingRate)
+class PackingFoldingRateAdmin(admin.ModelAdmin):
+    list_display = [
+        'packing_type',
+        'folding_rate',
+    ]
+
+    search_fields = [
+        'packing_type',
+        'folding_rate',
+    ]
+
+    list_per_page = 20
+
+    ordering = [
+        'packing_type',
+    ]
+
+
+
+@admin.register(models.WhCubePrice)
+class WhCubePriceAdmin(admin.ModelAdmin):
+    list_display = [
+        'km',
+        'cube_price',
+    ]
+
+    search_fields = [
+        'km',
+        'cube_price',
+    ]
+
+    list_per_page = 20
+
+    ordering = [
+        'km',
+    ]
+
 
 
 class SupplierDistanceInline(admin.TabularInline):
@@ -106,6 +159,27 @@ class NominalLabelMappingAdmin(admin.ModelAdmin):
         'book',
         'plant_code',
         'model'
+    )
+
+
+@admin.register(models.AirFreightRate)
+class AirFreightRateAdmin(admin.ModelAdmin):
+    """Nominal label mapping admin. """
+    list_display = (
+        'country',
+        'base',
+        'rate',
+        'danger_rate'
+    )
+
+    search_fields = [
+        'country',
+        'base',
+    ]
+
+    list_filter = (
+        'country',
+        'base',
     )
 
 
@@ -187,14 +261,16 @@ class InboundCalculationInline(admin.StackedInline):
     extra = 0
 
 
+
 class ConfValueFilter(admin.SimpleListFilter):
     """  Filter by label value """
     title = '配置'
     parameter_name = 'conf'
 
     def lookups(self, request, model_admin):
-        existed_labels = models.Ebom.objects.values('conf').distinct()
-        return [(e['conf'], e['conf']) for e in existed_labels]
+        pass
+        # existed_labels = models.Ebom.objects.values('conf').distinct()
+        # return [(e['conf'], e['conf']) for e in existed_labels]
 
     def queryset(self, request, queryset):
         if self.value() is not None:
@@ -206,13 +282,17 @@ class ConfValueFilter(admin.SimpleListFilter):
 @admin.register(models.Ebom)
 class EbomAdmin(admin.ModelAdmin):
     """ EBOM admin. """
+    def __init__(self, *args, **kwagrs):
+        getcontext().prec = 3
+        super().__init__(*args, **kwagrs)
+
     change_list_template = 'costsummary/change_list.html'
 
-    list_per_page = 8
+    list_per_page = 20
 
     list_display = (
         'label',
-        'conf',
+        # 'conf',
         'veh_pt',
         'upc',
         'fna',
@@ -324,7 +404,7 @@ class EbomAdmin(admin.ModelAdmin):
         InboundModeInline,
         InboundOperationalPackageInline,
         InboundPackageInline,
-        InboundCalculationInline
+        InboundCalculationInline,
     ]
 
     def save_model(self, request, obj, form, change):
@@ -335,19 +415,20 @@ class EbomAdmin(admin.ModelAdmin):
         if hasattr(obj, 'rel_calc'):
             obj.rel_calc.save(force_update=True)
 
-    def changelist_view(self, request, extra_context=None):
-        """ filter by session value """
-        q = request.GET.copy()
+    # 这里导致对车型筛选后不能返回全量
+    # def changelist_view(self, request, extra_context=None):
+    #     """ filter by session value """
+    #     q = request.GET.copy()
 
-        if 'label__id__exact' in q:
-            request.session['label'] = q['label__id__exact']
+    #     if 'label__id__exact' in q:
+    #         request.session['label'] = q['label__id__exact']
 
-        else:
-            if 'label' in request.session:
-                q['label__id__exact'] = request.session['label']
-                request.GET = q
+    #     else:
+    #         if 'label' in request.session:
+    #             q['label__id__exact'] = request.session['label']
+    #             request.GET = q
 
-        return super(EbomAdmin, self).changelist_view(request, extra_context=extra_context)
+    #     return super(EbomAdmin, self).changelist_view(request, extra_context=extra_context)
 
     def get_quantity(self, obj):
         """ max of configuration quanity. """
@@ -637,6 +718,7 @@ class EbomAdmin(admin.ModelAdmin):
 
     get_inboundheaderpart_color.short_description = '头零件信息/颜色件'
 
+
     def get_inboundmode_logistics_incoterm_mode(self, obj):
         """ 最终模式梳理 信息, 运输条款 """
         _ = self
@@ -648,6 +730,7 @@ class EbomAdmin(admin.ModelAdmin):
                 return rel_obj.get_logistics_incoterm_mode_display()
 
         return None
+
 
     get_inboundmode_logistics_incoterm_mode.short_description = '最终模式/运输条款'
 
@@ -976,12 +1059,17 @@ class EbomAdmin(admin.ModelAdmin):
     def get_inboundpackage_supplier_pkg_cubic_pcs(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装Cubic/Pcs """
         _ = self
-
         if hasattr(obj, 'rel_package'):
             rel_obj = obj.rel_package
 
             if hasattr(rel_obj, 'supplier_pkg_cubic_pcs'):
-                return rel_obj.supplier_pkg_cubic_pcs
+                if rel_obj.supplier_pkg_cubic_pcs is not None:
+                    if rel_obj.supplier_pkg_cubic_pcs > 0.1:
+                        return round(rel_obj.supplier_pkg_cubic_pcs,3)
+                    else:
+                        return Decimal(rel_obj.supplier_pkg_cubic_pcs)/Decimal(1)
+                else:
+                    return rel_obj.supplier_pkg_cubic_pcs
 
         return None
 
@@ -990,12 +1078,17 @@ class EbomAdmin(admin.ModelAdmin):
     def get_inboundpackage_supplier_pkg_cubic_veh(self, obj):
         """ 最终包装信息梳理 信息, 供应商包装Cubic/Veh """
         _ = self
-
         if hasattr(obj, 'rel_package'):
             rel_obj = obj.rel_package
 
             if hasattr(rel_obj, 'supplier_pkg_cubic_veh'):
-                return rel_obj.supplier_pkg_cubic_veh
+                if rel_obj.supplier_pkg_cubic_veh is not None:
+                    if rel_obj.supplier_pkg_cubic_veh > 0.1:
+                        return round(rel_obj.supplier_pkg_cubic_veh,3)
+                    else:
+                        return Decimal(rel_obj.supplier_pkg_cubic_veh)/Decimal(1)
+                else:
+                    return rel_obj.supplier_pkg_cubic_veh
 
         return None
 
@@ -1009,7 +1102,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_package
 
             if hasattr(rel_obj, 'sgm_pkg_name'):
-                return rel_obj.sgm_pkg_name
+                    return rel_obj.sgm_pkg_name
 
         return None
 
@@ -1088,12 +1181,17 @@ class EbomAdmin(admin.ModelAdmin):
     def get_inboundpackage_sgm_pkg_cubic_pcs(self, obj):
         """ 最终包装信息梳理 信息, SGM包装Cubic/Pcs """
         _ = self
-
         if hasattr(obj, 'rel_package'):
             rel_obj = obj.rel_package
 
             if hasattr(rel_obj, 'sgm_pkg_cubic_pcs'):
-                return rel_obj.sgm_pkg_cubic_pcs
+                if rel_obj.sgm_pkg_cubic_pcs is not None:
+                    if rel_obj.sgm_pkg_cubic_pcs > 0.1:
+                        return round(rel_obj.sgm_pkg_cubic_pcs,3)
+                    else:
+                        return Decimal(rel_obj.sgm_pkg_cubic_pcs)/Decimal(1)
+                else:
+                    return rel_obj.sgm_pkg_cubic_pcs
 
         return None
 
@@ -1102,12 +1200,19 @@ class EbomAdmin(admin.ModelAdmin):
     def get_inboundpackage_sgm_pkg_cubic_veh(self, obj):
         """ 最终包装信息梳理 信息, SGM包装Cubic/Veh """
         _ = self
-
+        getcontext().prec = 3
         if hasattr(obj, 'rel_package'):
             rel_obj = obj.rel_package
 
             if hasattr(rel_obj, 'sgm_pkg_cubic_veh'):
-                return rel_obj.sgm_pkg_cubic_veh
+
+                if rel_obj.sgm_pkg_cubic_veh is not None:
+                    if rel_obj.sgm_pkg_cubic_veh > 0.1:
+                        return round(rel_obj.sgm_pkg_cubic_veh,3)
+                    else:
+                        return Decimal(rel_obj.sgm_pkg_cubic_veh)*Decimal(1)
+                else:
+                    return rel_obj.sgm_pkg_cubic_veh
 
         return None
 
@@ -1177,7 +1282,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'process'):
-                return rel_obj.get_process_display()
+                return rel_obj.process
 
         return None
 
@@ -1191,7 +1296,7 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs
 
             if hasattr(rel_obj, 'suggest_delivery_method'):
-                return rel_obj.get_suggest_delivery_method_display()
+                return rel_obj.suggest_delivery_method
 
         return None
 
@@ -1373,7 +1478,13 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs_package
 
             if hasattr(rel_obj, 'supplier_pkg_cubic_pcs'):
-                return rel_obj.supplier_pkg_cubic_pcs
+                if rel_obj.supplier_pkg_cubic_pcs is not None:
+                    if rel_obj.supplier_pkg_cubic_pcs > 0.1:
+                        return round(rel_obj.supplier_pkg_cubic_pcs,3)
+                    else:
+                        return Decimal(rel_obj.supplier_pkg_cubic_pcs)/Decimal(1)
+                else:
+                    return rel_obj.supplier_pkg_cubic_pcs
 
         return None
 
@@ -1387,7 +1498,13 @@ class EbomAdmin(admin.ModelAdmin):
             rel_obj = obj.rel_tcs_package
 
             if hasattr(rel_obj, 'supplier_pkg_cubic_veh'):
-                return rel_obj.supplier_pkg_cubic_veh
+                if rel_obj.supplier_pkg_cubic_veh is not None:
+                    if rel_obj.supplier_pkg_cubic_veh > 0.1:
+                        return round(rel_obj.supplier_pkg_cubic_veh,3)
+                    else:
+                        return Decimal(rel_obj.supplier_pkg_cubic_veh)/Decimal(1)
+                else:
+                    return rel_obj.supplier_pkg_cubic_veh
 
         return None
 
@@ -1953,7 +2070,6 @@ class EbomAdmin(admin.ModelAdmin):
 
     get_inboundcalculation_inbound_ttl_veh.short_description = '计算/单车费用 TTL IB Cost'
 
-
 # @admin.register(models.AEbomEntry)
 class AEbomEntryAdmin(admin.ModelAdmin):
     """ EBOM entry admin. """
@@ -1992,7 +2108,7 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                 # fetch all ebom records
                 with RawConnection.cursor() as cursor:
                     cursor.execute("""
-                        SELECT UPC, FNA, 
+                        SELECT UPC, FNA,
                           COMPONENT_MATERIAL_NUMBER, COMPONENT_MATERIAL_DESC_E, COMPONENT_MATERIAL_DESC_C, 
                           HEADER_PART_NUMBER, AR_EM_MATERIAL_FLAG, 
                           WORKSHOP, DUNS_NUMBER, VENDOR_NAME, EWO_NUMBER, MODEL_OPTION, VPPS, 
@@ -2037,6 +2153,7 @@ class AEbomEntryAdmin(admin.ModelAdmin):
 
                         # create related object
                         # tcs object
+
                         if not hasattr(ebom_object, 'rel_tcs'):
                             tcs_object = models.InboundTCS(
                                 bom=ebom_object
@@ -2112,6 +2229,10 @@ class AEbomEntryAdmin(admin.ModelAdmin):
                                 bom=ebom_object
                             )
                             calc_object.save()
+                        # configure calculation object
+                        if not hasattr(ebom_object, 'rel_conf_calc'):
+                            conf_calc_object = models.ConfigureCalculation(bom=ebom_object)
+                            conf_calc_object.save()
 
                     # update entry object
                     entry_object.whether_loaded = True
@@ -2130,6 +2251,8 @@ class AEbomEntryAdmin(admin.ModelAdmin):
     load.short_description = "载入选中的车型"
 
     actions = ['load']
+
+
 
 
 class UploadForm(ModelForm):
@@ -2162,7 +2285,6 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
         if model_name != '999':
             fields.remove('label')
-            fields.remove('conf')
             fields.remove('veh_pt')
 
         return fields
@@ -2183,6 +2305,25 @@ class UploadHandlerAdmin(admin.ModelAdmin):
         else:
             return super().get_readonly_fields(request)
 
+    # @csrf_protect_m
+    # def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+    #     with transaction.atomic(using=router.db_for_write(self.model)):
+    #         ret = self._changeform_view(request, object_id, form_url, extra_context)
+    #     return ret
+
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.conf_calculation()
+            statistic.model_statistic()
+            statistic.plant_statistic()
+            statistic.base_statistic()
+            statistic.sgm_statistic()
+            statistic.future_model_table()
+            statistic.summary_model_calculate()
+        return ret
+
+
     def response_add(self, request, obj, post_url_continue=None):
         """ Redirect when add work completed. """
         post_file = request.FILES['file_to_be_uploaded']
@@ -2198,15 +2339,59 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             # Buyer data
             # ParseArray.parse_buyer(matrix)
             pass
+        elif obj.model_name == 3:
+            self.parse_production(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Production._meta.model_name))
+        elif obj.model_name == 4:
+            upload.load_initial_tec_num(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.TecCore._meta.model_name))
+        elif obj.model_name == 5:
+            upload.load_initial_packing_folding_rate(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.PackingFoldingRate._meta.model_name))
+        elif obj.model_name == 6:
+            upload.load_initial_air_freight_rate(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.AirFreightRate._meta.model_name))           
+        elif obj.model_name == 7:
+            upload.load_initial_wh_cube_price(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.WhCubePrice._meta.model_name))
+        elif obj.model_name == 8:
+            upload.load_initial_nl_mapping(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.NominalLabelMapping._meta.model_name))
+        elif obj.model_name == 9:
+            upload.load_initial_os_rate(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.InboundOverseaRate._meta.model_name))
+        elif obj.model_name == 10:
+            upload.load_initial_cc_location(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.InboundCcLocations._meta.model_name))
+        elif obj.model_name == 11:
+            upload.load_initial_cc_danger(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.InboundDangerPackage._meta.model_name))
+        elif obj.model_name == 12:
+            upload.load_initial_cc_supplier(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.InboundCCSupplierRate._meta.model_name))
+        elif obj.model_name == 13:
+            upload.load_initial_supplier_rate(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.InboundSupplierRate._meta.model_name))
+        elif obj.model_name == 14:
+            upload.load_initial_distance(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Supplier._meta.model_name))
+        elif obj.model_name == 15:
+            upload.load_initial_truck_rate(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.TruckRate._meta.model_name))
+        elif obj.model_name == 16:
+            upload.load_new_model_statistic(matrix)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.NewModelStatistic._meta.model_name))
+ 
 
         elif obj.model_name == 999:
             # wide table
-            self.parse_wide(matrix, label=obj.label, conf=obj.conf, veh_pt=obj.veh_pt)
-
+            self.parse_wide(matrix, label=obj.label, veh_pt=obj.veh_pt)
+            return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name))
         else:
             raise Http404('无法识别的数据模式.')
 
-        return HttpResponseRedirect(reverse('admin:costsummary_%s_changelist' % models.Ebom._meta.model_name))
+
+
 
     def download_tcs_template(self, obj):
         """ Download tcs template. """
@@ -2231,6 +2416,82 @@ class UploadHandlerAdmin(admin.ModelAdmin):
     download_buyer_template.allow_tags = True
     download_wide_template.allow_tags = True
 
+    def parse_production(self, matrix: list):
+        PRODUCTION_HEADER = [
+            {'r_offset': 0, 'ex_header': '基地', 'in_header': 'base', 'model_name': 'Production', 'field_name': 'base'},
+            {'r_offset': 0, 'ex_header': '工厂', 'in_header': 'plant', 'model_name': 'Production', 'field_name': 'plant'},
+            {'r_offset': 0, 'ex_header': '车型', 'in_header': 'label', 'model_name': 'Production','field_name': 'label'},
+            {'r_offset': 0, 'ex_header': '配置', 'in_header': 'configure', 'model_name': 'Production','field_name': 'configure'},
+            {'r_offset': 0, 'ex_header': '产量', 'in_header': 'production', 'model_name': 'Production','field_name': 'production'},
+            {'r_offset': 0, 'ex_header': '产量年', 'in_header': 'prd_year', 'model_name': 'Production','field_name': 'prd_year'},
+            ]
+
+        for i in range(len(matrix)):
+            all_header_found = True
+            # all header field found
+            for dict_obj in PRODUCTION_HEADER:
+                if 'col' not in dict_obj:
+                    all_header_found = False
+                    break
+            if all_header_found:
+                break
+            row = matrix[i]
+            for j in range(len(row)):
+                cell = str(row[j])
+                for k in range(len(PRODUCTION_HEADER)):
+                    if cell.strip().upper() == PRODUCTION_HEADER[k]['ex_header']:
+                        PRODUCTION_HEADER[k]['col'] = j
+                        PRODUCTION_HEADER[k]['row'] = i
+
+        for dict_obj in PRODUCTION_HEADER:
+            if dict_obj['in_header'].upper() == 'base'.upper():
+                base_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'plant'.upper():
+                plant_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'label'.upper():
+                label_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'configure'.upper():
+                configure_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'production'.upper():
+                production_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'prd_year'.upper():
+                prd_year_col = dict_obj['col']
+                break
+
+        # check header row
+        data_row = None
+
+        for dict_obj in PRODUCTION_HEADER:
+            if 'col' not in dict_obj or 'row' not in dict_obj:
+                raise Http404(f'数据列{dict_obj["ex_header"]}没有找到')
+            else:
+                if data_row is not None:
+                    if dict_obj['row'] - dict_obj['r_offset'] != data_row:
+                        raise Http404('Excel 格式不正确.')
+                else:
+                    data_row = dict_obj['row'] + dict_obj['r_offset']
+
+        # start parsing row
+        start_row = data_row + 1
+
+        for row in matrix[start_row:]:
+            base_value = row[base_col]
+            plant_value = row[plant_col]
+            label_value = row[label_col]
+            configure_value = row[configure_col].replace(' ','')
+            production_value = row[production_col]
+            prd_year_value = row[prd_year_col]
+
+            production_object = models.Production.objects.filter(base=base_value,plant=plant_value,label=label_value, \
+                                                configure=configure_value,prd_year=prd_year_value).first()
+            if production_object is None:
+                production_object = models.Production(base=base_value,plant=plant_value,label=label_value, \
+                                                configure=configure_value,prd_year=prd_year_value)
+            setattr(production_object, 'production', production_value)
+            production_object.save()
+
+
+
     def parse_tcs(self, matrix: list):
         """ Parse TCS data. """
         _ = self
@@ -2242,9 +2503,8 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             {'r_offset': 0, 'ex_header': 'Bidderlist No.', 'in_header': 'bidder_list_number'},
             {'r_offset': 0, 'ex_header': 'Program', 'in_header': 'program'},
             {'r_offset': 0, 'ex_header': 'Supplier Address', 'in_header': 'supplier_ship_from_address'},
-            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process', 'match_display': True},
-            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method',
-             'match_display': True},
+            {'r_offset': 0, 'ex_header': 'Process', 'in_header': 'process'},
+            {'r_offset': 0, 'ex_header': 'Suggest Delivery Method', 'in_header': 'suggest_delivery_method'},
             {'r_offset': 0, 'ex_header': 'SGM\'s Transport Duty', 'in_header': 'sgm_transport_duty',
              'match_display': True},
             {'r_offset': 0, 'ex_header': 'Supplier\'s Transport Duty', 'in_header': 'supplier_transport_duty',
@@ -2269,6 +2529,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             {'r_offset': 0, 'ex_header': 'GM_PKG_HEIGHT', 'in_header': 'sgm_pkg_height'},
         ]
 
+        #logger.debug("TCS_HEADER: %s" % (TCS_HEADER,))
         for i in range(len(TCS_HEADER)):
             TCS_HEADER[i]['ex_header'] = TCS_HEADER[i]['ex_header'].upper()  # upper-case
 
@@ -2319,6 +2580,31 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                 continue
 
             # always create new tcs & package objects
+            unsorted_tcs_object = models.UnsortedInboundTCS(part_number=lookup_value)
+            params = dict()
+
+            for dict_obj in TCS_HEADER[1:]:
+                if 'match_display' in dict_obj:
+                    choice = getattr(unsorted_tcs_object, dict_obj['in_header'] + '_choice')
+
+                    for int_val, str_val in choice:
+                        if row[dict_obj['col']].strip().upper() == str_val.upper():
+                            params[dict_obj['in_header']] = int_val
+                            break
+
+                else:
+                    params[dict_obj['in_header']] = row[dict_obj['col']]
+
+
+            for attribute in params:
+                if params[attribute] == '':
+                    params[attribute] = None
+                setattr(unsorted_tcs_object, attribute, params[attribute])
+
+            unsorted_tcs_object.save()
+
+
+            '''
             try:
                 unsorted_tcs_object = models.UnsortedInboundTCS(part_number=lookup_value)
                 params = dict()
@@ -2343,9 +2629,12 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                 unsorted_tcs_object.save()
 
             except Exception as e:
-                print(e)
+                print('ddd')
+                #logger.exception("dddd")
+            '''
 
-    def parse_wide(self, matrix: list, label: models.NominalLabelMapping, conf: str=None, veh_pt=None):
+
+    def parse_wide(self, matrix: list, label: models.NominalLabelMapping, veh_pt=None):#conf: str=None, 
         """ Parse wide table """
         _ = self
 
@@ -2358,7 +2647,7 @@ class UploadHandlerAdmin(admin.ModelAdmin):
              'field_name': 'structure_node', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'TEC NO.', 'in_header': 'tec', 'model_name': 'ebom', 'field_name': 'tec_id',
              'skip': False, 'match_display': False},
-            {'r_offset': 0, 'ex_header': 'P/N-PART NUMBER', 'in_header': 'part_number', 'model_name': 'ebom',
+            {'r_offset': 0, 'ex_header': 'P/N - PART NUMBER', 'in_header': 'part_number', 'model_name': 'ebom',
              'field_name': 'part_number', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'DESCRIPTION EN', 'in_header': 'description_en', 'model_name': 'ebom',
              'field_name': 'description_en', 'skip': False, 'match_display': False},
@@ -2398,9 +2687,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
              'model_name': 'inboundtcs', 'field_name': 'supplier_ship_from_address', 'skip': False,
              'match_display': False},
             {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/报价条款', 'in_header': 'get_inboundtcs_process',
-             'model_name': 'inboundtcs', 'field_name': 'process', 'skip': False, 'match_display': True},
+             'model_name': 'inboundtcs', 'field_name': 'process', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/运输模式', 'in_header': 'get_inboundtcs_suggest_delivery_method',
-             'model_name': 'inboundtcs', 'field_name': 'suggest_delivery_method', 'skip': False, 'match_display': True},
+             'model_name': 'inboundtcs', 'field_name': 'suggest_delivery_method', 'skip': False, 'match_display': False},
             {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/SGM运输责任', 'in_header': 'get_inboundtcs_sgm_transport_duty',
              'model_name': 'inboundtcs', 'field_name': 'sgm_transport_duty', 'skip': False, 'match_display': True},
             {'r_offset': 0, 'ex_header': 'TCS 物流跟踪/供应商运输责任', 'in_header': 'get_inboundtcs_supplier_transport_duty',
@@ -2723,29 +3012,75 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                         raise Http404('Excel 格式不正确.')
                 else:
                     data_row = dict_obj['row'] + dict_obj['r_offset']
-
-            if dict_obj['model_name'] != 'ebom':
-                related_model_names.add(dict_obj['model_name'])
+            #把设计的字段除了属于ebom表的全部都存进集合
+            # if dict_obj['model_name'] != 'ebom':
+            #     related_model_names.add(dict_obj['model_name'])
 
         # start parsing row
         start_row = data_row + 1
 
         # look up field
-        lookup_col = None
+        #只是为了找到零件号对应的列
+        part_col = None
 
         for dict_obj in WIDE_HEADER:
-            if dict_obj['in_header'].upper() == 'part_number'.upper():
-                lookup_col = dict_obj['col']
+            if dict_obj['in_header'].upper() == 'UPC'.upper():
+                upc_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'FNA'.upper():
+                fna_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'part_number'.upper():
+                part_col = dict_obj['col']
+            elif dict_obj['in_header'].upper() == 'header_part_number'.upper():
+                header_part_number_col = dict_obj['col']
                 break
 
-        assert lookup_col
+        # assert upc_col
+        # assert fna_col
+        # assert part_col
 
+        # for char in matrix[data_row-1][130:]:
+        new_configutes_dict = dict()
+        df_list = []
+
+        dict_conf = dict()
+        data_row_objects = matrix[2]
+        for j in range(130,len(data_row_objects)):
+            obj = data_row_objects[j].replace(' ','')
+            obj = obj.replace('\n','')
+            obj = obj.strip()
+            cell = obj
+            dict_conf[cell] = j
+        for attribute in dict_conf:
+            new_configutes_dict[attribute]=dict()
+
+        # 配置计算用表
+        # conf_cal_params = dict()
+        # for char in  ['ebom','inboundpackage','inboundheaderpart','inboundcalculation','inboundaddress']:
+        #     conf_cal_params[char] = dict()
+        #     for obj in WIDE_HEADER:
+        #         if obj['model_name'] == char:
+        #             conf_cal_params[char][obj['field_name']] = dict()
+
+
+        related_model_names=['inboundmode','inboundoperationalpackage','inboundaddress',
+                                    'inboundpackage','inboundoperationalmode','inboundtcs','inboundheaderpart','inboundbuyer',
+                                    'inboundtcspackage',
+                                     'inboundcalculation',
+                                    ]
+                                    
         # parse list of list
-        for row in matrix[start_row:]:
-            lookup_value = row[lookup_col]
+        for i in range(start_row,len(matrix)):
+            row = matrix[i]
+            print(i)
+            # for row in matrix[start_row:]:
+            part_value = row[part_col]#首先拿到零件号
+            upc_value = row[upc_col]
+            fna_value = row[fna_col]
+            header_part_number = row[header_part_number_col]
 
             # if no actual value
-            if lookup_value == '':
+            #如果零件号为空，继续下面的操作
+            if part_value == '':
                 continue
 
             # params context
@@ -2756,7 +3091,9 @@ class UploadHandlerAdmin(admin.ModelAdmin):
 
             # parse row cells
             for dict_obj in WIDE_HEADER:
-                if not dict_obj['skip'] and dict_obj['col'] != lookup_col:
+                #如果这个字段不是要略过的，而且也不是零件号
+                #这里实现了当上传表中的值不是选项时，把值直接存进字典，当值是选项时，把值对应的数值存入字典model_params_instance
+                if not dict_obj['skip'] and dict_obj['col'] != part_col:
 
                     if not dict_obj['match_display']:
                         model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = row[dict_obj['col']]
@@ -2768,31 +3105,42 @@ class UploadHandlerAdmin(admin.ModelAdmin):
                         )
 
                         for int_val, str_val in choice:
-                            if row[dict_obj['col']].strip().upper() == str_val.upper():
-                                model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = int_val
-                                break
+                            if type(row[dict_obj['col']]) == str:
+                                if row[dict_obj['col']].strip().upper() == str_val.upper():
+                                    model_params_instance[dict_obj['model_name']][dict_obj['field_name']] = int_val
+                                    break
 
             # match ebom object
-            ebom_object = models.Ebom.objects.filter(part_number=lookup_value, label=label, conf=conf,
-                                                     veh_pt=veh_pt).first()
-
-            if not ebom_object:
-                new_ebom_object = models.Ebom(
-                    label=label,
-                    conf=conf,
-                    part_number=lookup_value,
-                    veh_pt=veh_pt,
-                )
-                new_ebom_object.save()
-
-                ebom_object = new_ebom_object
+            if header_part_number != '':
+                ebom_object = models.Ebom.objects.filter(part_number=part_value,header_part_number=header_part_number, \
+                                                    label=label, upc=upc_value,fna=fna_value,veh_pt=veh_pt).first()
+                if not ebom_object:
+                    ebom_object = models.Ebom(
+                        label=label,
+                        header_part_number=header_part_number,
+                        upc=upc_value,
+                        fna=fna_value,
+                        part_number=part_value,
+                        veh_pt=veh_pt,
+                    )
+            else:
+                ebom_object = models.Ebom.objects.filter(part_number=part_value, \
+                                                    label=label, upc=upc_value,fna=fna_value,veh_pt=veh_pt).first()
+                if not ebom_object:
+                    ebom_object = models.Ebom(
+                        label=label,
+                        upc=upc_value,
+                        fna=fna_value,
+                        part_number=part_value,
+                        veh_pt=veh_pt,
+                    )
 
             # ebom object
             native_params = model_params_instance['ebom']
             model_params_instance.pop('ebom')
 
             for attribute in native_params:
-                if native_params[attribute] == '':
+                if native_params[attribute] == '' or native_params[attribute] == '-':
                     native_params[attribute] = None
                 setattr(ebom_object, attribute, native_params[attribute])
 
@@ -2802,7 +3150,6 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             for related_model_name in related_model_names:
                 external_params = model_params_instance[related_model_name]
                 related_model = apps.get_model('costsummary', model_name=related_model_name)
-
                 related_object = related_model.objects.filter(bom=ebom_object).first()
                 if not related_object:
                     related_object = related_model(bom=ebom_object)
@@ -2817,6 +3164,61 @@ class UploadHandlerAdmin(admin.ModelAdmin):
             # force update the calculation object
             ebom_object.rel_calc.save(force_update=True)
 
+            # 构建字典，里面包含属性和它对应的列
+            for attribute in dict_conf:
+                if row[dict_conf[attribute]] == '' or row[dict_conf[attribute]] == '-' :
+                    row[dict_conf[attribute]] = None
+                new_configutes_dict[attribute][ebom_object.id]=row[dict_conf[attribute]]
+        new_configutes_df=pd.DataFrame(new_configutes_dict)
+        new_configutes_df['id']=new_configutes_df.index
+        new_configutes_df=new_configutes_df.drop_duplicates(subset='id')
+        #origin configures table
+        # 当索引相同时，用新的数据替换掉就的数据
+        path = BASE_DIR + '/costsummary/persistence/CONF/configures.csv'
+
+        ori_configures_df=pd.read_csv(path,encoding='gbk')
+
+        # ori_configures_js=models.configure_data.objects.get(id=1).data
+
+        # ori_configures_dict=json.loads(ori_configures_js)
+        # ori_configures_df=pd.DataFrame(ori_configures_dict)
+        ori_configures_df=ori_configures_df[ori_configures_df['id'].notnull()]
+        ori_configures_df.index=ori_configures_df['id'].astype(int)
+        ori_configures_df.columns=ori_configures_df.columns.str.replace(' ','')
+        ori_configures_df.columns=ori_configures_df.columns.str.replace('\n','')
+        
+        new_configutes_df.index=new_configutes_df['id'].astype(int)
+        
+
+        ori_index_lst=list(ori_configures_df['id'])
+        new_index_lst=list(new_configutes_df.index)
+        index_lst=list(set(ori_index_lst).difference(set(new_index_lst)))
+        index_lst.sort()
+        ori_configures_df_keep=ori_configures_df.loc[index_lst]
+        configures_df=pd.concat([ori_configures_df_keep,new_configutes_df],axis=0)
+        configures_df.to_csv(path,encoding='gbk',index=False)
+
+        # ori_configures_df.index=ori_configures_df.index.astype(int)
+        # ori_configures_df.columns=ori_configures_df.columns.str.replace(' ','')
+        # ori_configures_df.columns=ori_configures_df.columns.str.replace('\n','')
+
+        # ori_index_lst=list(ori_configures_df['id'])
+        # print('ori_index_lst',ori_index_lst)
+        # new_index_lst=list(new_configutes_df.index)
+        # print('new_index_lst',new_index_lst)
+        # index_lst=list(set(ori_index_lst).difference(set(new_index_lst)))
+        # print('index_lst',index_lst)
+        # index_lst.sort()
+        # ori_configures_df_keep=ori_configures_df.loc[index_lst]
+        # configures_df=pd.concat([ori_configures_df_keep,new_configutes_df],axis=0)
+        # configures_df.to_csv(path,encoding='gbk')
+        # configures_df=new_configutes_df # 清空配置表
+        # configures_js=configures_df.to_json()
+        # configure_object = models.configure_data(id=1)
+        # configure_object.data=configures_js
+        # configure_object.save()
+
+
 
 @admin.register(models.Constants)
 class ConstantsAdmin(admin.ModelAdmin):
@@ -2828,6 +3230,21 @@ class ConstantsAdmin(admin.ModelAdmin):
 
     search_fields = [
         'constant_key'
+    ]
+
+
+#未来5年年降率
+@admin.register(models.FutureRate)
+class FutureRateAdmin(admin.ModelAdmin):
+    """ Constants """
+    list_display = (
+        'year',
+        'dom_rate',
+        'import_rate'
+    )
+
+    search_fields = [
+        'year'
     ]
 
 
@@ -2866,7 +3283,6 @@ class InboundOverseaRateAdmin(admin.ModelAdmin):
 
 @admin.register(models.InboundCcLocations)
 class InboundCcLocationsAdmin(admin.ModelAdmin):
-    """ Oversea rate. """
     list_display = (
         'cc_group',
         'cn_location_name',
@@ -2875,7 +3291,7 @@ class InboundCcLocationsAdmin(admin.ModelAdmin):
         'per_cbm',
         'cc'
     )
-
+    
     search_fields = [
         'cc_group',
         'cn_location_name',
@@ -2886,7 +3302,6 @@ class InboundCcLocationsAdmin(admin.ModelAdmin):
 
 @admin.register(models.InboundCcOperation)
 class InboundCcOperationAdmin(admin.ModelAdmin):
-    """ Oversea rate. """
     list_display = (
         'cc',
         'cbm_in_usd',
@@ -2896,7 +3311,6 @@ class InboundCcOperationAdmin(admin.ModelAdmin):
 
 @admin.register(models.InboundDangerPackage)
 class InboundCcDangerAdmin(admin.ModelAdmin):
-    """ Oversea rate. """
     list_display = (
         'from_to_type',
         'from_one',
@@ -2914,7 +3328,6 @@ class InboundCcDangerAdmin(admin.ModelAdmin):
 
 @admin.register(models.InboundCCSupplierRate)
 class InboundCCSupplierRateAdmin(admin.ModelAdmin):
-    """ Oversea rate. """
     list_display = (
         'supplier_duns',
         'supplier_name',
@@ -2935,7 +3348,6 @@ class InboundCCSupplierRateAdmin(admin.ModelAdmin):
 
 @admin.register(models.InboundSupplierRate)
 class InboundSupplierRateAdmin(admin.ModelAdmin):
-    """ Oversea rate. """
     list_display = (
         'supplier',
         'base',
@@ -2955,7 +3367,8 @@ class InboundSupplierRateAdmin(admin.ModelAdmin):
 
     search_fields = [
         'supplier',
-        'duns'
+        'duns',
+        'pickup_location'
     ]
 
 
@@ -3009,6 +3422,28 @@ class RegionRouteRateAdmin(admin.ModelAdmin):
         'parent_region',
         'reference',
     )
+
+
+@admin.register(models.Production)
+class ProductionAdmin(admin.ModelAdmin):
+    list_display = (
+        'base',
+        'plant',
+        'label',
+        'configure',
+        'production',
+        'prd_year'
+    )
+
+    search_fields = [
+        'label','configure'
+    ]
+
+    list_filter = (
+        'label',
+        'configure',
+    )
+
 
 
 @admin.register(models.UnsortedInboundBuyer)
@@ -3098,3 +3533,883 @@ class WaterwayRateAdmin(admin.ModelAdmin):
         'destination_base',
         'rate'
     )
+
+
+
+@admin.register(models.ConfigureCalculation)
+class ConfigureCalculationAdmin(admin.ModelAdmin):
+
+    change_list_template = 'costsummary/configure_update.html'
+
+    list_display = [
+        'base',
+        'plant_code',
+        'value',
+        'conf_name',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'conf_name',
+        'plant_code',
+        'value'
+    ]
+
+    list_per_page =200
+
+    ordering = [
+        'base',
+    ]
+    
+
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:  
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:  
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:  
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+
+@admin.register(models.ModelStatistic)
+class ModelStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'base',
+        'plant_code',
+        'value',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'value',
+        'plant_code'
+    ]
+
+    list_per_page =10
+
+    ordering = [
+        'base',
+    ]
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.model_statistic()
+        return ret
+
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:  
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+
+
+@admin.register(models.NewModelStatistic)
+class NewModelStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'base',
+        'plant_code',
+        'value',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'value',
+        'plant_code'
+    ]
+
+    list_per_page =20
+
+    ordering = [
+        'base',
+    ]
+
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.model_statistic()
+        return ret
+
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:  
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+
+@admin.register(models.SummaryModelStatistic)
+class SummaryModelStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'base',
+        'plant_code',
+        'value',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'value',
+        'plant_code'
+    ]
+
+    list_per_page =200
+
+    ordering = [
+        'base',
+    ]
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.model_statistic()
+        return ret
+
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:  
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+@admin.register(models.PlantStatistic)
+class PlantStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'base',
+        'plant_code',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'plant_code'
+    ]
+
+    list_per_page =10
+
+    ordering = [
+        'base',
+    ]
+
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.plant_statistic()
+        return ret
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+
+@admin.register(models.BaseStatistic)
+class BaseStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'base',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    search_fields = [
+        'base'
+    ]
+
+    list_per_page =10
+
+    ordering = [
+        'base',
+    ]
+
+    def add_view(self, request, form_url='', extra_context=None):
+        ret = self.changeform_view(request, None, form_url, extra_context)
+        if request.method == 'POST':
+            statistic.base_statistic()
+        return ret
+
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+
+@admin.register(models.SummaryStatistic)
+class SummaryStatisticAdmin(admin.ModelAdmin):
+    list_display = [
+        'company',
+        'model_year',
+        'get_volume',
+        'get_inbound_ttl_veh',
+        'get_import_ib',
+        'get_dom_ddp_ib',
+        'get_dom_fca_ib',
+        'get_production',
+        'get_dom_volume',
+        'get_dom_rate',
+        'get_local_volume',
+        'get_local_rate',
+        'get_park_volume',
+        'get_park_rate'
+    ]
+
+    list_per_page =10
+    
+    def get_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'volume'):
+            return round(obj.volume,2)
+        return None
+    get_volume.short_description = '体积'
+
+    def get_inbound_ttl_veh(self, obj):
+        _ = self
+        if hasattr(obj, 'inbound_ttl_veh'):
+            return round(obj.inbound_ttl_veh,2)
+        return None
+    get_inbound_ttl_veh.short_description = 'IB'
+
+    def get_import_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'import_ib'):
+            if obj.import_ib is not None:
+                return round(obj.import_ib,2)
+        return None
+    get_import_ib.short_description = '进口IB'
+
+    def get_dom_ddp_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_ddp_ib'):
+            if obj.dom_ddp_ib is not None:
+                return round(obj.dom_ddp_ib,2)
+        return None
+    get_dom_ddp_ib.short_description = '国产DDP_IB'
+
+    def get_dom_fca_ib(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_fca_ib'):
+            if obj.dom_fca_ib is not None:
+                return round(obj.dom_fca_ib,2)
+        return None
+    get_dom_fca_ib.short_description = '国产FCA_IB'
+
+    def get_production(self, obj):
+        _ = self
+        if hasattr(obj, 'production'):
+            if obj.production is not None:  
+                return round(obj.production,2)
+        return None
+    get_production.short_description = '产量'
+
+    def get_dom_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_volume'):
+            return round(obj.dom_volume,2)
+        return None
+    get_dom_volume.short_description = '国产体积'
+
+    def get_dom_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'dom_rate'):
+            # return round(obj.dom_rate,2)
+            return '%.2f%%' % (round(obj.dom_rate,4) * 100)
+        return None
+    get_dom_rate.short_description = '国产化率'
+
+    def get_local_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'local_volume'):
+            return round(obj.local_volume,2)
+        return None
+    get_local_volume.short_description = '本地体积'
+
+    def get_local_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'local_rate'):
+            # return round(obj.local_rate,2)
+            return '%.2f%%' % (round(obj.local_rate,4) * 100)
+        return None
+    get_local_rate.short_description = '本地化率'
+
+    def get_park_volume(self, obj):
+        _ = self
+        if hasattr(obj, 'park_volume'):
+            return round(obj.park_volume,2)
+        return None
+    get_park_volume.short_description = '园区体积'
+
+    def get_park_rate(self, obj):
+        _ = self
+        if hasattr(obj, 'park_rate'):
+            if obj.park_rate is not None:
+                # return round(obj.park_rate,2)
+                return '%.2f%%' % (round(obj.park_rate,4) * 100)
+        return None
+    get_park_rate.short_description = '园区化率'
+    

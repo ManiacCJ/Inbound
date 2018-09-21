@@ -26,7 +26,7 @@ SECRET_KEY = '3!*w^s)6*nz=##3h6nlw(ou@q6@5*2j(u-&1=4t8369zeakux='
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '127.0.0.1', 'localhost', '10.203.102.129', '10.203.60.3'
+    '127.0.0.1', 'localhost', '10.203.102.129', '10.203.60.3','10.0.0.221','*'
 ]
 
 
@@ -86,6 +86,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+      'OPTIONS': {
+        'timeout': 20,
+    }
     }
 }
 
@@ -125,6 +128,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 100000
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
